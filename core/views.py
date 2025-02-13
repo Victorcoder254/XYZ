@@ -7,7 +7,8 @@ from .models import User
 from .decorators import role_required
 from django.shortcuts import render, redirect
 from django.contrib.auth import login
-from .models import User
+from core.models import User  # Import your custom User model
+from django.contrib import messages
 
 
 def home_view(request):
@@ -15,15 +16,31 @@ def home_view(request):
 
 def signup_view(request):
     if request.method == "POST":
-        username = request.POST["username"]
-        email = request.POST["email"]
-        password = request.POST["password"]
-        role = request.POST["role"]  # Capturing role from the form
+        username = request.POST.get("username").strip()
+        email = request.POST.get("email").strip()
+        password = request.POST.get("password")
+        role = request.POST.get("role")  # Capturing role from the form
 
+        # Validate role
         if role not in ["business_admin", "cpc_admin"]:
-            return render(request, "files/signup.html", {"error": "Invalid role selected"})
+            messages.error(request, "Invalid role selected.")
+            return render(request, "files/signup.html")
 
-        user = User.objects.create_user(username=username, email=email, password=password, role=role)
+        # Check if user already exists
+        if User.objects.filter(username=username).exists():
+            messages.error(request, "Username already exists. Choose another one.")
+            return render(request, "files/signup.html")
+
+        if User.objects.filter(email=email).exists():
+            messages.error(request, "Email already in use. Use another email.")
+            return render(request, "files/signup.html")
+
+        # Create user without role first
+        user = User.objects.create_user(username=username, email=email, password=password)
+        user.role = role  # Assign role manually
+        user.save()
+
+        # Log in user
         login(request, user)
 
         # Redirect based on role
@@ -35,7 +52,7 @@ def signup_view(request):
     return render(request, "files/signup.html")
 
 
-def login_view(request):
+def login_user(request):
     if request.method == "POST":
         username = request.POST["username"]
         password = request.POST["password"]
@@ -48,16 +65,18 @@ def login_view(request):
                 return redirect("cpc_dashboard")
         else:
             return HttpResponse("Invalid credentials")
-    return render(request, "login.html")
+    return render(request, "files/login.html")
 
 
 @login_required
 @role_required("business_admin")
 def business_dashboard(request):
-    return render(request, "business_dashboard.html")
+    return HttpResponse("Business Dashboard")
+    #return render(request, "business_dashboard.html")
 
 @login_required
 @role_required("cpc_admin")
 def cpc_dashboard(request):
-    return render(request, "cpc_dashboard.html")
+    return HttpResponse("CPC Dashboard")
+    #return render(request, "cpc_dashboard.html")
 
