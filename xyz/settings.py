@@ -59,7 +59,14 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'xyz.wsgi.application'
-
+#ecap fbbt roxs jumm
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = "okothceo19@gmail.com"  # Replace with your Gmail address
+EMAIL_HOST_PASSWORD = "ecap fbbt roxs jumm"  # Replace with the 16-character App Password
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
