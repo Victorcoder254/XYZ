@@ -233,6 +233,15 @@ def business_dashboard(request):
                             order=question['order']
                         )
 
+                    # Send email notifications to CPC admins of selected colleges
+                    for college_id in selected_colleges:
+                        try:
+                            cpc_profile = CPCProfile.objects.get(college_id=college_id)
+                            if cpc_profile and cpc_profile.user.email:
+                                send_job_notification_email(job, cpc_profile.user.email)
+                        except CPCProfile.DoesNotExist:
+                            continue
+
                     # Clear session data
                     request.session.pop('job_data', None)
                     request.session.pop('questions_data', None)
@@ -259,30 +268,46 @@ def business_dashboard(request):
 
 
 def send_job_notification_email(job, email):
-    subject = f"New Job Opportunity: {job.job_title}"
-    message = f"""
-    Hello CPC Admin,
+    try:
+        # Convert salary values to float for formatting
+        min_pay = float(job.minimum_pay) if job.minimum_pay else 0
+        max_pay = float(job.maximum_pay) if job.maximum_pay else 0
+        
+        subject = f"New Job Opportunity: {job.job_title}"
+        message = f"""
+Hello CPC Admin,
 
-    A new job opportunity has been posted:
+A new job opportunity has been posted:
 
-    Job Title: {job.job_title}
-    Category: {job.get_job_category_display()}
-    Employment Type: {job.get_employment_type_display()}
-    Location: {job.work_location} ({job.get_location_type_display()})
-    
-    You can view the full details in your CPC dashboard.
+Job Title: {job.job_title}
+Department: {job.department}
+Category: {job.job_category}
+Employment Type: {job.employment_type}
+Pay Grade: {job.pay_grade}
+Salary Range: ${min_pay:,.2f} - ${max_pay:,.2f}
+Location: {job.work_location} ({job.location_type})
 
-    Best regards,
-    {job.business.business_name}
-    """
-    
-    send_mail(
-        subject,
-        message,
-        settings.EMAIL_HOST_USER,
-        [email],
-        fail_silently=False,
-    )
+Application Deadline: {job.application_deadline}
+
+You can view the full details in your CPC dashboard.
+
+Best regards,
+{job.business.business_name}
+        """
+        
+        send_mail(
+            subject,
+            message,
+            settings.EMAIL_HOST_USER,
+            [email],
+            fail_silently=False,
+        )
+        print(f"Email sent successfully to {email}")
+        return True
+    except Exception as e:
+        print(f"Error sending email notification: {str(e)}")
+        return False
+
 
 
 @login_required
