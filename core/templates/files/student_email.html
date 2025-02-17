@@ -1,0 +1,36 @@
+{% extends 'files/base1.html' %}
+
+{% block title %}Subscribe{% endblock %}
+
+{% block content %}
+<div class="container mt-5 d-flex justify-content-center">
+    <div class="card shadow p-4" style="width: 100%; max-width: 500px;">
+        <h2 class="text-center text-orange">Subscribe for Job Alerts</h2>
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="mb-3">
+                <label for="name" class="form-label">Full Name</label>
+                <input type="text" class="form-control" name="name" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="email" class="form-label">Email Address</label>
+                <input type="email" class="form-control" name="email" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="college_id" class="form-label">Select Your College</label>
+                <select class="form-select" name="college_id" required>
+                    <option value="" disabled selected>Select College</option>
+                    {% for college in colleges %}
+                        <option value="{{ college.id }}">{{ college.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <button type="submit" class="btn btn-dark w-100">Subscribe</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

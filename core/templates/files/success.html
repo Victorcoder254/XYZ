@@ -1,0 +1,71 @@
+{% extends 'files/base1.html' %}
+{% load static %}
+{% block title %}Success{% endblock %}
+
+{% block content %}
+<div class="container mt-5 d-flex justify-content-center align-items-center min-vh-75">
+    <div class="card shadow-lg p-5 text-center success-card">
+        <div class="success-icon mb-4">
+            <img src="{% static 'files/39581.jpg' %}" alt="Success" class="img-fluid" width="200">
+        </div>
+        <h3 class="text-success fw-bold mb-3">Submission Successful!</h3>
+        <p class="text-muted mb-4">Your request has been processed successfully.</p>
+        <a href="{% url 'home' %}" class="btn btn-gradient btn-lg px-5 py-3 rounded-pill hover-scale">
+            <i class="fas fa-home me-2"></i>Return to Home
+        </a>
+    </div>
+</div>
+
+<style>
+    .success-card {
+        border: none;
+        border-radius: 20px;
+        transition: all 0.3s ease;
+        background: linear-gradient(145deg, #ffffff, #f5f5f5);
+    }
+
+    .success-icon {
+        animation: bounce 1s ease;
+    }
+
+    .btn-gradient {
+        background: linear-gradient(45deg, #FF8C00, #FFA500);
+        border: none;
+        color: white;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(255, 140, 0, 0.2);
+    }
+
+    .btn-gradient:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(255, 140, 0, 0.3);
+        color: white;
+    }
+
+    .hover-scale {
+        transition: transform 0.3s ease;
+    }
+
+    .hover-scale:hover {
+        transform: scale(1.02);
+    }
+
+    @keyframes bounce {
+        0%, 20%, 50%, 80%, 100% {
+            transform: translateY(0);
+        }
+        40% {
+            transform: translateY(-20px);
+        }
+        60% {
+            transform: translateY(-10px);
+        }
+    }
+
+    .min-vh-75 {
+        min-height: 75vh;
+    }
+</style>
+{% endblock %}

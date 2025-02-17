@@ -7,4 +7,7 @@ urlpatterns = [
     path("login/", login_user, name="login_user"),
     path("business/", business_dashboard, name="business_dashboard"),
     path("cpc/", cpc_dashboard, name="cpc_dashboard"),
+    path("submit-email/", submit_student_profile, name="submit_student_profile"),    
+    path('submit-job-application/<int:job_id>/<str:email>/', submit_job_application, name='submit_job_application'),
+    path("success/", success_page, name="success_page"),
 ]

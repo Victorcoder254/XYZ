@@ -702,66 +702,6 @@
       </div>
     </div>
   </main>
-<!-- Rounded Orange Badge Button -->
-<!-- Rounded Orange Badge Button -->
-<button class="position-fixed bottom-3 end-3 btn btn-warning rounded-circle shadow-lg d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;" data-bs-toggle="modal" data-bs-target="#customModal">
-  <i class="fa fa-plus text-white" style="font-size: 1.5rem;"></i>
-</button>
-
-
-<!-- Modal -->
-<div class="modal fade" id="customModal" tabindex="-1" aria-labelledby="customModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="customModalLabel">Create A Job Listing</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <form method="POST">
-          {% csrf_token %}
-          <input type="hidden" name="form_type" value="job">
-
-          <div class="mb-3">
-            <label class="form-label">Job Title</label>
-            <input type="text" class="form-control" name="job_title" required>
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label">Job Description</label>
-            <textarea class="form-control" name="job_description" rows="3" required></textarea>
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label">Required Qualifications</label>
-            <textarea class="form-control" name="required_qualifications" rows="2" required></textarea>
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label">Application Deadline</label>
-            <input type="date" class="form-control" name="application_deadline" required>
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label">Select Colleges</label>
-            <div class="border p-2" style="max-height: 200px; overflow-y: auto;">
-                {% for college in colleges %}
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="selected_colleges" value="{{ college.id }}" id="college{{ college.id }}">
-                        <label class="form-check-label" for="college{{ college.id }}">
-                            {{ college.name }}
-                        </label>
-                    </div>
-                {% endfor %}
-            </div>
-          </div>
-
-          <button type="submit" class="btn btn-primary">Post Job</button>
-        </form>
-      </div>
-    </div>
-  </div>
-</div>
 
 
 <!-- Profile Creation Modal -->
@@ -777,27 +717,33 @@
         <form method="post">
           {% csrf_token %}
           <input type="hidden" name="form_type" value="cpc_profile">
-
+        
           <div class="mb-3">
-            <label for="college_name" class="form-label fw-bold" style="color: #000;">College Name:</label>
-            <input type="text" name="college_name" class="form-control border-dark" required>
+            <label for="college_id" class="form-label fw-bold" style="color: #000;">College:</label>
+            <select name="college_id" class="form-control border-dark" required>
+              <option value="" disabled selected>Select Your College</option>
+              {% for college in colleges %}
+                <option value="{{ college.id }}">{{ college.name }}</option>
+              {% endfor %}
+            </select>
           </div>
-
+        
           <div class="mb-3">
             <label for="location" class="form-label fw-bold" style="color: #000;">Location:</label>
             <input type="text" name="location" class="form-control border-dark" required>
           </div>
-
+        
           <div class="mb-3">
             <label for="major_field" class="form-label fw-bold" style="color: #000;">Major Field:</label>
             <input type="text" name="major_field" class="form-control border-dark" required>
           </div>
-
+        
           <div class="modal-footer d-flex justify-content-between">
             <button type="button" class="btn" data-bs-dismiss="modal" style="background-color: black; color: white;">Cancel</button>
             <button type="submit" class="btn" style="background-color: #FF8C00; color: black;">Save Profile</button>
           </div>
         </form>
+        
       </div>
     </div>
   </div>
@@ -813,24 +759,6 @@
 {% endif %}
 
 
-
-<script>
-  document.getElementById("college-search").addEventListener("input", function() {
-      let filter = this.value.toLowerCase();
-      let select = document.getElementById("college-select");
-      for (let option of select.options) {
-          option.style.display = option.text.toLowerCase().includes(filter) ? "block" : "none";
-      }
-  });
-  
-  document.getElementById("college-select").addEventListener("change", function() {
-      let selectedColleges = document.getElementById("selected-colleges");
-      selectedColleges.innerHTML = "";
-      for (let option of this.selectedOptions) {
-          selectedColleges.innerHTML += `<span class="badge bg-secondary m-1">${option.text} <button type="button" class="btn-close btn-sm"></button></span>`;
-      }
-  });
-  </script>
 <script src="{% static 'files/assets/js/core/popper.min.js' %}"></script>
 <script src="{% static 'files/assets/js/core/bootstrap.min.js' %}"></script>
 <script src="{% static 'files/assets/js/plugins/perfect-scrollbar.min.js' %}"></script>

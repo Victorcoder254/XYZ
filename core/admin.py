@@ -30,8 +30,18 @@ class CollegeAdmin(admin.ModelAdmin):
 
 admin.site.register(College, CollegeAdmin)
 
+admin.site.register(CPCProfile)
 class CpcAdmin(admin.ModelAdmin):
-    list_display = ("college_name", "location", "created_at")
+    list_display = ("college", "location", "created_at")
 
-admin.site.register(CPCProfile, CpcAdmin)
+class StudentAdmin(admin.ModelAdmin):
+    list_display = ("cpc_profile", "name", "email")    
+
+admin.site.register(StudentProfile, StudentAdmin)
+
+class JobApplicationAdmin(admin.ModelAdmin):
+    list_display = ("job", "student_profile", "submitted_at")
+
+admin.site.register(JobApplication, JobApplicationAdmin)
+
 
