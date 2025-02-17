@@ -749,42 +749,58 @@
             </div>
 
             <div class="row">
-                <div class="col-md-4 mb-3">
-                    <label for="employment_type" class="form-label">Employment Type*</label>
-                    <select id="employment_type" name="employment_type" class="form-select" required>
-                        <option value="">Select Type</option>
-                        {% for value, label in employment_types %}
-                            <option value="{{ value }}">{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <label for="job_category" class="form-label">Job Category*</label>
-                    <select id="job_category" name="job_category" class="form-select" required>
-                        <option value="">Select Category</option>
-                        {% for value, label in job_categories %}
-                            <option value="{{ value }}">{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <label for="pay_grade" class="form-label">Pay Grade*</label>
-                    <select id="pay_grade" name="pay_grade" class="form-select" required>
-                        <option value="">Select Grade</option>
-                        {% for value, label in pay_grades %}
-                            <option value="{{ value }}">{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-
+              <div class="col-md-4 mb-3">
+                  <label for="employment_type" class="form-label">Employment Type*</label>
+                  <select id="employment_type" name="employment_type" class="form-select" required>
+                      <option value="">Select Type</option>
+                      {% for value, label in employment_types %}
+                          <option value="{{ value }}">{{ label }}</option>
+                      {% endfor %}
+                  </select>
+              </div>
+              <div class="col-md-4 mb-3">
+                  <label for="job_category" class="form-label">Job Category*</label>
+                  <div class="input-group">
+                      <select id="job_category_select" class="form-select" onchange="handleCategoryChange(this)">
+                          <option value="">Select Category</option>
+                          {% for value, label in job_categories %}
+                              <option value="{{ value }}">{{ label }}</option>
+                          {% endfor %}
+                          <option value="custom">Other (Type Custom)</option>
+                      </select>
+                      <input type="text" id="job_category" name="job_category" class="form-control d-none" 
+                             placeholder="Enter custom category" required>
+                  </div>
+              </div>
+              <div class="col-md-4 mb-3">
+                  <label for="pay_grade" class="form-label">Pay Grade*</label>
+                  <select id="pay_grade" name="pay_grade" class="form-select" required>
+                      <option value="">Select Grade</option>
+                      {% for value, label in pay_grades %}
+                          <option value="{{ value }}">{{ label }}</option>
+                      {% endfor %}
+                  </select>
+              </div>
+          </div>
+          
             <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="salary_range" class="form-label">Salary Range*</label>
-                    <input type="text" id="salary_range" name="salary_range" class="form-control" 
-                          placeholder="e.g., $50,000 - $70,000" required>
+                <div class="col-md-4 mb-3">
+                    <label for="minimum_pay" class="form-label">Minimum Pay (Annual)*</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" id="minimum_pay" name="minimum_pay" class="form-control" 
+                              placeholder="e.g., 50000" required min="0" step="1000">
+                    </div>
                 </div>
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
+                    <label for="maximum_pay" class="form-label">Maximum Pay (Annual)*</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" id="maximum_pay" name="maximum_pay" class="form-control" 
+                              placeholder="e.g., 70000" required min="0" step="1000">
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
                     <label for="location_type" class="form-label">Location Type*</label>
                     <select id="location_type" name="location_type" class="form-select" required>
                         <option value="">Select Type</option>
@@ -808,7 +824,7 @@
             </div>
 
             <div class="mb-3">
-                <label for="benefits" class="form-label">Benefits & Perks</label>
+                <label for="benefits" class="form-label">Benefits, Perks $ Remarks</label>
                 <textarea id="benefits" name="benefits" class="form-control" rows="3" 
                           placeholder="List job benefits and perks"></textarea>
             </div>
@@ -818,7 +834,7 @@
                     <label for="application_deadline" class="form-label">Application Deadline*</label>
                     <input type="date" id="application_deadline" name="application_deadline" class="form-control" required>
                 </div>
-                <div class="col-md-6 mb-3">
+                <div class="col-md-6 mb-3" hidden>
                     <label class="d-block form-label" for="status">Status</label>
                     <div class="form-check form-switch" id="status" name="status">
                         <input type="checkbox" id="is_active" name="is_active" class="form-check-input" checked>
@@ -949,30 +965,51 @@
   let currentStep = 1;
   let questionCount = 0;
   
-  // Form validation function
-  function validateStep(step) {
-      if (step === 1) {
-          const requiredFields = [
-              'job_title', 'department', 'job_description', 
-              'required_qualifications', 'employment_type', 
-              'job_category', 'pay_grade', 'salary_range',
-              'location_type', 'work_location', 'skills_required',
-              'application_deadline'
-          ];
-  
-          for (const field of requiredFields) {
-              const element = document.querySelector(`[name="${field}"]`);
-              if (!element || !element.value.trim()) {
-                  alert(`Please fill in the ${field.replace('_', ' ')}`);
-                  element.focus();
-                  return false;
-              }
-          }
-          return true;
-      }
-      return true;
-  }
-  
+// Add this to your existing script section
+function handleCategoryChange(selectElement) {
+    const customInput = document.getElementById('job_category');
+    if (selectElement.value === 'custom') {
+        selectElement.classList.add('d-none');
+        customInput.classList.remove('d-none');
+        customInput.focus();
+    } else {
+        customInput.value = selectElement.value;
+    }
+}
+
+// Update the validateStep function to include minimum/maximum pay validation
+function validateStep(step) {
+    if (step === 1) {
+        const requiredFields = [
+            'job_title', 'department', 'job_description', 
+            'required_qualifications', 'employment_type', 
+            'job_category', 'pay_grade', 'minimum_pay', 'maximum_pay',
+            'location_type', 'work_location', 'skills_required',
+            'application_deadline'
+        ];
+
+        for (const field of requiredFields) {
+            const element = document.querySelector(`[name="${field}"]`);
+            if (!element || !element.value.trim()) {
+                alert(`Please fill in the ${field.replace('_', ' ')}`);
+                element.focus();
+                return false;
+            }
+        }
+
+        // Validate pay range
+        const minPay = parseFloat(document.getElementById('minimum_pay').value);
+        const maxPay = parseFloat(document.getElementById('maximum_pay').value);
+        if (maxPay <= minPay) {
+            alert('Maximum pay must be greater than minimum pay');
+            document.getElementById('maximum_pay').focus();
+            return false;
+        }
+
+        return true;
+    }
+    return true;
+}
   // Form handling functions
   function showStep(step) {
       step = parseInt(step);

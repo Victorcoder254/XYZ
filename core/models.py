@@ -70,7 +70,6 @@ class CPCProfile(models.Model):
                 return self.college.name if self.college else "No College Assigned"
 
 
-
 class JobDescription(models.Model):
     EMPLOYMENT_TYPE_CHOICES = [
         ('full_time', 'Full Time'),
@@ -97,15 +96,36 @@ class JobDescription(models.Model):
     ]
 
     business = models.ForeignKey(BusinessProfile, on_delete=models.CASCADE, related_name="job_descriptions", blank=True, null=True)
-    job_title = models.CharField(max_length=255, blank=True, null=True)  # Remove blank=True, null=True to make it required
-    job_description = models.TextField(blank=True, null=True)  # Remove blank=True, null=True
-    required_qualifications = models.TextField(blank=True, null=True)  # Remove blank=True, null=True
+    job_title = models.CharField(max_length=255, blank=True, null=True)
+    job_description = models.TextField(blank=True, null=True)
+    required_qualifications = models.TextField(blank=True, null=True)
     
     # Required fields
     employment_type = models.CharField(max_length=20, choices=EMPLOYMENT_TYPE_CHOICES, blank=True, null=True)
-    job_category = models.CharField(max_length=20, choices=JOB_CATEGORY_CHOICES, blank=True, null=True)
+    job_category = models.CharField(max_length=100, help_text="Select from common categories or enter your own", blank=True, null=True)
     pay_grade = models.CharField(max_length=20, choices=PAY_GRADE_CHOICES, blank=True, null=True)
-    salary_range = models.CharField(max_length=100, help_text="e.g., $50,000 - $70,000", blank=True, null=True)
+    # New salary fields
+    minimum_pay = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        help_text="Minimum annual salary",
+        blank=True, 
+        null=True
+    )
+    maximum_pay = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        help_text="Maximum annual salary",
+        blank=True, 
+        null=True
+    )
+    location_type = models.CharField(
+        max_length=20,
+        choices=[('remote', 'Remote'), ('hybrid', 'Hybrid'), ('onsite', 'On-site')],
+        default='onsite',
+        blank=True,
+        null=True
+    )
     location_type = models.CharField(
         max_length=20,
         choices=[('remote', 'Remote'), ('hybrid', 'Hybrid'), ('onsite', 'On-site')],

@@ -107,7 +107,8 @@ def business_dashboard(request):
                         'employment_type': request.POST.get('employment_type', '').strip(),
                         'job_category': request.POST.get('job_category', '').strip(),
                         'pay_grade': request.POST.get('pay_grade', '').strip(),
-                        'salary_range': request.POST.get('salary_range', '').strip(),
+                        'minimum_pay': request.POST.get('minimum_pay', '').strip(),
+                        'maximum_pay': request.POST.get('maximum_pay', '').strip(),
                         'location_type': request.POST.get('location_type', '').strip(),
                         'work_location': request.POST.get('work_location', '').strip(),
                         'skills_required': request.POST.get('skills_required', '').strip(),
@@ -118,12 +119,27 @@ def business_dashboard(request):
 
                     # Validate required fields
                     missing_fields = [field for field, value in job_data.items() 
-                                    if not value and field != 'benefits' and field != 'is_active']
+                                    if not value and field not in ['benefits', 'is_active']]
                     
                     if missing_fields:
                         return JsonResponse({
                             'status': 'error',
                             'message': f'Missing required fields: {", ".join(missing_fields)}'
+                        })
+
+                    # Validate pay range
+                    try:
+                        min_pay = float(job_data['minimum_pay'])
+                        max_pay = float(job_data['maximum_pay'])
+                        if min_pay >= max_pay:
+                            return JsonResponse({
+                                'status': 'error',
+                                'message': 'Maximum pay must be greater than minimum pay'
+                            })
+                    except ValueError:
+                        return JsonResponse({
+                            'status': 'error',
+                            'message': 'Invalid pay values provided'
                         })
 
                     # Store in session
@@ -270,7 +286,8 @@ def business_dashboard(request):
                         'employment_type': request.POST.get('employment_type', '').strip(),
                         'job_category': request.POST.get('job_category', '').strip(),
                         'pay_grade': request.POST.get('pay_grade', '').strip(),
-                        'salary_range': request.POST.get('salary_range', '').strip(),
+                        'minimum_pay': request.POST.get('minimum_pay', '').strip(),
+                        'maximum_pay': request.POST.get('maximum_pay', '').strip(),
                         'location_type': request.POST.get('location_type', '').strip(),
                         'work_location': request.POST.get('work_location', '').strip(),
                         'skills_required': request.POST.get('skills_required', '').strip(),
@@ -281,12 +298,27 @@ def business_dashboard(request):
 
                     # Validate required fields
                     missing_fields = [field for field, value in job_data.items() 
-                                    if not value and field != 'benefits' and field != 'is_active']
+                                    if not value and field not in ['benefits', 'is_active']]
                     
                     if missing_fields:
                         return JsonResponse({
                             'status': 'error',
                             'message': f'Missing required fields: {", ".join(missing_fields)}'
+                        })
+
+                    # Validate pay range
+                    try:
+                        min_pay = float(job_data['minimum_pay'])
+                        max_pay = float(job_data['maximum_pay'])
+                        if min_pay >= max_pay:
+                            return JsonResponse({
+                                'status': 'error',
+                                'message': 'Maximum pay must be greater than minimum pay'
+                            })
+                    except ValueError:
+                        return JsonResponse({
+                            'status': 'error',
+                            'message': 'Invalid pay values provided'
                         })
 
                     # Store in session
