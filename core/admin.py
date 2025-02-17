@@ -20,10 +20,13 @@ class BusinessProfileAdmin(admin.ModelAdmin):
 
 admin.site.register(BusinessProfile, BusinessProfileAdmin)    
 
+@admin.register(JobDescription)
 class JobDescriptionAdmin(admin.ModelAdmin):
-    list_display = ("job_title", "business", "created_at")
-
-admin.site.register(JobDescription, JobDescriptionAdmin)
+    list_display = ('job_title', 'business', 'employment_type', 'job_category', 'location_type', 'created_at', 'is_active')
+    list_filter = ('employment_type', 'job_category', 'location_type', 'is_active', 'created_at')
+    search_fields = ('job_title', 'job_description', 'department', 'work_location')
+    date_hierarchy = 'created_at'
+    readonly_fields = ('created_at',)
 
 class CollegeAdmin(admin.ModelAdmin):
     list_display = ("name", "email")
@@ -39,9 +42,11 @@ class StudentAdmin(admin.ModelAdmin):
 
 admin.site.register(StudentProfile, StudentAdmin)
 
-class JobApplicationAdmin(admin.ModelAdmin):
-    list_display = ("job", "student_profile", "submitted_at")
 
-admin.site.register(JobApplication, JobApplicationAdmin)
+
+class CustomQuestionAdmin(admin.ModelAdmin):
+    list_display = ("job", "created_at")
+
+admin.site.register(CustomQuestion, CustomQuestionAdmin)
 
 

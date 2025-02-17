@@ -12,7 +12,9 @@ from django.contrib import messages
 import datetime
 from django.core.mail import send_mail
 from django.conf import settings#
-
+from django.http import JsonResponse
+from django.urls import reverse
+import json
 
 def home_view(request):
     return render(request, "files/home.html")
@@ -71,102 +73,377 @@ def login_user(request):
     return render(request, "files/login.html")
 
 
-
 @login_required
-@role_required("business_admin")  # Ensure only business admins can access
+@role_required("business_admin")
 def business_dashboard(request):
     profile_complete = False
     jobs = None
-    colleges = College.objects.all()  # Fetch all colleges for selection
+    colleges = College.objects.all()
 
-    # Check if the business profile exists
     if hasattr(request.user, "business_profile"):
         profile_complete = True
         business = request.user.business_profile
-        jobs = JobDescription.objects.filter(business=business)  # Fetch jobs for display
+        jobs = JobDescription.objects.filter(business=business)
 
     if request.method == "POST":
-        form_type = request.POST.get("form_type")  # Check which form is submitted
+        form_type = request.POST.get("form_type")
+        current_step = request.POST.get("current_step", "1")
 
-        if form_type == "profile":
-            # Handle business profile creation
-            business_name = request.POST.get("business_name")
-            industry = request.POST.get("industry")
-            location = request.POST.get("location")
-            description = request.POST.get("description")
-            phone_number = request.POST.get("phone_number")
-            website = request.POST.get("website")
+        print(f"Processing POST request - Step {current_step}")
+        print(f"POST data: {request.POST}")
+        print(f"Current session data: {dict(request.session)}")
 
-            if business_name and industry and location:
-                BusinessProfile.objects.create(
-                    user=request.user,
-                    business_name=business_name,
-                    industry=industry,
-                    location=location,
-                    description=description,
-                    phone_number=phone_number,
-                    website=website
-                )
-                return redirect("business_dashboard")  # Refresh page after saving
+        if form_type == "job":
+            if current_step == "1":
+                try:
+                    print("Processing step 1")
+                    
+                    # Store job details in session
+                    job_data = {
+                        'job_title': request.POST.get('job_title', '').strip(),
+                        'department': request.POST.get('department', '').strip(),
+                        'job_description': request.POST.get('job_description', '').strip(),
+                        'required_qualifications': request.POST.get('required_qualifications', '').strip(),
+                        'employment_type': request.POST.get('employment_type', '').strip(),
+                        'job_category': request.POST.get('job_category', '').strip(),
+                        'pay_grade': request.POST.get('pay_grade', '').strip(),
+                        'salary_range': request.POST.get('salary_range', '').strip(),
+                        'location_type': request.POST.get('location_type', '').strip(),
+                        'work_location': request.POST.get('work_location', '').strip(),
+                        'skills_required': request.POST.get('skills_required', '').strip(),
+                        'benefits': request.POST.get('benefits', '').strip(),
+                        'application_deadline': request.POST.get('application_deadline', '').strip(),
+                        'is_active': request.POST.get('is_active') == 'on'
+                    }
 
-        elif form_type == "job":  
-            # Handle job description submission
-            job_title = request.POST.get("job_title")
-            job_description = request.POST.get("job_description")
-            required_qualifications = request.POST.get("required_qualifications")
-            application_deadline = request.POST.get("application_deadline")
-            selected_colleges = request.POST.getlist("selected_colleges")  # Get selected colleges
+                    # Validate required fields
+                    missing_fields = [field for field, value in job_data.items() 
+                                    if not value and field != 'benefits' and field != 'is_active']
+                    
+                    if missing_fields:
+                        return JsonResponse({
+                            'status': 'error',
+                            'message': f'Missing required fields: {", ".join(missing_fields)}'
+                        })
 
-            if job_title and job_description and required_qualifications and application_deadline:
-                job = JobDescription.objects.create(
-                    business=request.user.business_profile,
-                    job_title=job_title,
-                    job_description=job_description,
-                    required_qualifications=required_qualifications,
-                    application_deadline=application_deadline
-                )
-                job.colleges.set(selected_colleges)  # Assign selected colleges to job
+                    # Store in session
+                    request.session['job_data'] = job_data
+                    request.session.modified = True
+                    request.session.save()
+                    
+                    print(f"Step 1 session data saved: {request.session.get('job_data')}")
+                    return JsonResponse({'status': 'success', 'step': 2})
 
-                # Only fetch CPC Admin emails
-                colleges = College.objects.filter(id__in=selected_colleges)
-                cpc_profiles = CPCProfile.objects.filter(college__in=colleges)
-                cpc_admin_emails = [cpc.user.email for cpc in cpc_profiles if cpc.user.email]
+                except Exception as e:
+                    print(f"Error in step 1: {str(e)}")
+                    return JsonResponse({'status': 'error', 'message': str(e)})
 
-                if cpc_admin_emails:
-                    for cpc_email in cpc_admin_emails:
-                        subject = f"New Job Opportunity: {job_title}"
-                        message = f"""
-                        Hello CPC Admin,
+            elif current_step == "2":
+                try:
+                    print("Processing step 2")
+                    
+                    # Retrieve job_data from session
+                    job_data = request.session.get('job_data')
+                    if not job_data:
+                        return JsonResponse({
+                            'status': 'error',
+                            'message': 'Job details not found. Please fill out step 1 first.'
+                        })
+                    print(f"Job data from session: {job_data}")
 
-                        A new job opportunity has been posted for your college. Please review and share with eligible students:
+                    # Retrieve questions_data from POST
+                    questions_data_json = request.POST.get('questions_data')
+                    if questions_data_json:
+                        questions_data = json.loads(questions_data_json)
+                        print(f"Questions data from POST: {questions_data}")
+                    else:
+                        questions_data = []
+                        print("No questions data found in POST")
 
-                        Job Title: {job_title}
-                        Description: {job_description}
-                        Required Qualifications: {required_qualifications}
-                        Application Deadline: {application_deadline}
+                    # Store questions_data in session
+                    request.session['questions_data'] = questions_data
+                    request.session.modified = True
+                    request.session.save()
+                    print(f"Step 2 session data saved: {questions_data}")
 
-                        You can view this job posting in your CPC dashboard.
+                    return JsonResponse({'status': 'success', 'step': 3})
 
-                        Best regards,
-                        {request.user.business_profile.business_name}
-                        """
+                except Exception as e:
+                    print(f"Error in step 2: {str(e)}")
+                    return JsonResponse({'status': 'error', 'message': str(e)})
 
-                        send_mail(
-                            subject,
-                            message,
-                            settings.EMAIL_HOST_USER,
-                            [cpc_email],
-                            fail_silently=False,
+            elif current_step == "3":
+                try:
+                    print("Processing step 3")
+                    print(f"Current session state: {dict(request.session)}")
+                    
+                    job_data = request.session.get('job_data')
+                    questions_data = request.session.get('questions_data', [])
+                    selected_colleges = request.POST.getlist('selected_colleges')
+
+                    print(f"Job data from session: {job_data}")
+                    print(f"Questions data from session: {questions_data}")
+                    print(f"Selected colleges: {selected_colleges}")
+
+                    if not job_data:
+                        return JsonResponse({
+                            'status': 'error',
+                            'message': 'Job details not found. Please fill out step 1 first.'
+                        })
+
+                    if not selected_colleges:
+                        return JsonResponse({
+                            'status': 'error',
+                            'message': 'Please select at least one college'
+                        })
+
+                    # Create job
+                    job = JobDescription.objects.create(
+                        business=request.user.business_profile,
+                        **job_data
+                    )
+                    
+                    # Add colleges
+                    job.colleges.set(selected_colleges)
+
+                    # Create custom questions
+                    for question in questions_data:
+                        CustomQuestion.objects.create(
+                            job=job,
+                            question_text=question['question_text'],
+                            question_type=question['question_type'],
+                            is_required=question['is_required'],
+                            options=question['options'],
+                            order=question['order']
                         )
 
-                return redirect("business_dashboard")  # Refresh after submission
+                    # Clear session data
+                    request.session.pop('job_data', None)
+                    request.session.pop('questions_data', None)
 
-    return render(request, "files/business_dashboard.html", {
+                    messages.success(request, "Job posted successfully!")
+                    return JsonResponse({'status': 'success', 'redirect': reverse('business_dashboard')})
+
+                except Exception as e:
+                    print(f"Error in step 3: {str(e)}")
+                    return JsonResponse({'status': 'error', 'message': str(e)})
+
+    context = {
         "profile_complete": profile_complete,
         "jobs": jobs,
-        "colleges": colleges,  # Send colleges to template
-    })
+        "colleges": colleges,
+        "employment_types": JobDescription.EMPLOYMENT_TYPE_CHOICES,
+        "job_categories": JobDescription.JOB_CATEGORY_CHOICES,
+        "pay_grades": JobDescription.PAY_GRADE_CHOICES,
+        "location_types": [('remote', 'Remote'), ('hybrid', 'Hybrid'), ('onsite', 'On-site')]
+    }
 
+    return render(request, "files/business_dashboard.html", context)
+    profile_complete = False
+    jobs = None
+    colleges = College.objects.all()
+
+    if hasattr(request.user, "business_profile"):
+        profile_complete = True
+        business = request.user.business_profile
+        jobs = JobDescription.objects.filter(business=business)
+
+    if request.method == "POST":
+        form_type = request.POST.get("form_type")
+        current_step = request.POST.get("current_step", "1")
+
+        print(f"Processing POST request - Step {current_step}")
+        print(f"POST data: {request.POST}")
+        print(f"Current session data: {dict(request.session)}")
+
+        if form_type == "job":
+            if current_step == "1":
+                try:
+                    print("Processing step 1")
+                    
+                    # Store job details in session
+                    job_data = {
+                        'job_title': request.POST.get('job_title', '').strip(),
+                        'department': request.POST.get('department', '').strip(),
+                        'job_description': request.POST.get('job_description', '').strip(),
+                        'required_qualifications': request.POST.get('required_qualifications', '').strip(),
+                        'employment_type': request.POST.get('employment_type', '').strip(),
+                        'job_category': request.POST.get('job_category', '').strip(),
+                        'pay_grade': request.POST.get('pay_grade', '').strip(),
+                        'salary_range': request.POST.get('salary_range', '').strip(),
+                        'location_type': request.POST.get('location_type', '').strip(),
+                        'work_location': request.POST.get('work_location', '').strip(),
+                        'skills_required': request.POST.get('skills_required', '').strip(),
+                        'benefits': request.POST.get('benefits', '').strip(),
+                        'application_deadline': request.POST.get('application_deadline', '').strip(),
+                        'is_active': request.POST.get('is_active') == 'on'
+                    }
+
+                    # Validate required fields
+                    missing_fields = [field for field, value in job_data.items() 
+                                    if not value and field != 'benefits' and field != 'is_active']
+                    
+                    if missing_fields:
+                        return JsonResponse({
+                            'status': 'error',
+                            'message': f'Missing required fields: {", ".join(missing_fields)}'
+                        })
+
+                    # Store in session
+                    request.session['job_data'] = job_data
+                    request.session.modified = True
+                    request.session.save()
+                    
+                    print(f"Step 1 session data saved: {request.session.get('job_data')}")
+                    return JsonResponse({'status': 'success', 'step': 2})
+
+                except Exception as e:
+                    print(f"Error in step 1: {str(e)}")
+                    return JsonResponse({'status': 'error', 'message': str(e)})
+
+            elif current_step == "2":
+                try:
+                    print("Processing step 2")
+                    
+                    # Retrieve job_data from session
+                    job_data = request.session.get('job_data')
+                    if not job_data:
+                        return JsonResponse({
+                            'status': 'error',
+                            'message': 'Job details not found. Please fill out step 1 first.'
+                        })
+                    print(f"Job data from session: {job_data}")
+
+                    questions_data = []
+                    question_count = int(request.POST.get('question_count', 0))
+                    print(f"Question count: {question_count}")
+
+                    for i in range(question_count):
+                        question = {
+                            'question_text': request.POST.get(f'question_text_{i}'),
+                            'question_type': request.POST.get(f'question_type_{i}'),
+                            'is_required': request.POST.get(f'is_required_{i}') == 'on',
+                            'options': [opt.strip() for opt in request.POST.get(f'options_{i}', '').split(',') if opt.strip()],
+                            'order': i
+                        }
+                        print(f"Question {i + 1} data: {question}")
+                        
+                        if question['question_type'] == 'multiple_choice' and not question['options']:
+                            return JsonResponse({
+                                'status': 'error',
+                                'message': f'Question {i+1} requires options for multiple choice type'
+                            })
+                            
+                        if question['question_text']:
+                            questions_data.append(question)
+
+                    # Store questions_data in session
+                    request.session['questions_data'] = questions_data
+                    request.session.modified = True
+                    request.session.save()
+                    print(f"Step 2 session data saved: {questions_data}")
+
+                    return JsonResponse({'status': 'success', 'step': 3})
+
+                except Exception as e:
+                    print(f"Error in step 2: {str(e)}")
+                    return JsonResponse({'status': 'error', 'message': str(e)})
+
+            elif current_step == "3":
+                try:
+                    print("Processing step 3")
+                    print(f"Current session state: {dict(request.session)}")
+                    
+                    job_data = request.session.get('job_data')
+                    questions_data = request.session.get('questions_data', [])
+                    selected_colleges = request.POST.getlist('selected_colleges')
+
+                    print(f"Job data from session: {job_data}")
+                    print(f"Questions data from session: {questions_data}")
+                    print(f"Selected colleges: {selected_colleges}")
+
+                    if not job_data:
+                        return JsonResponse({
+                            'status': 'error',
+                            'message': 'Job details not found. Please fill out step 1 first.'
+                        })
+
+                    if not selected_colleges:
+                        return JsonResponse({
+                            'status': 'error',
+                            'message': 'Please select at least one college'
+                        })
+
+                    # Create job
+                    job = JobDescription.objects.create(
+                        business=request.user.business_profile,
+                        **job_data
+                    )
+                    
+                    # Add colleges
+                    job.colleges.set(selected_colleges)
+
+                    # Create custom questions
+                    for question in questions_data:
+                        CustomQuestion.objects.create(
+                            job=job,
+                            question_text=question['question_text'],
+                            question_type=question['question_type'],
+                            is_required=question['is_required'],
+                            options=question['options'],
+                            order=question['order']
+                        )
+
+                    # Clear session data
+                    request.session.pop('job_data', None)
+                    request.session.pop('questions_data', None)
+
+                    messages.success(request, "Job posted successfully!")
+                    return JsonResponse({'status': 'success', 'redirect': reverse('business_dashboard')})
+
+                except Exception as e:
+                    print(f"Error in step 3: {str(e)}")
+                    return JsonResponse({'status': 'error', 'message': str(e)})
+
+    context = {
+        "profile_complete": profile_complete,
+        "jobs": jobs,
+        "colleges": colleges,
+        "employment_types": JobDescription.EMPLOYMENT_TYPE_CHOICES,
+        "job_categories": JobDescription.JOB_CATEGORY_CHOICES,
+        "pay_grades": JobDescription.PAY_GRADE_CHOICES,
+        "location_types": [('remote', 'Remote'), ('hybrid', 'Hybrid'), ('onsite', 'On-site')]
+    }
+
+    return render(request, "files/business_dashboard.html", context)
+
+
+
+def send_job_notification_email(job, email):
+    subject = f"New Job Opportunity: {job.job_title}"
+    message = f"""
+    Hello CPC Admin,
+
+    A new job opportunity has been posted:
+
+    Job Title: {job.job_title}
+    Category: {job.get_job_category_display()}
+    Employment Type: {job.get_employment_type_display()}
+    Location: {job.work_location} ({job.get_location_type_display()})
+    
+    You can view the full details in your CPC dashboard.
+
+    Best regards,
+    {job.business.business_name}
+    """
+    
+    send_mail(
+        subject,
+        message,
+        settings.EMAIL_HOST_USER,
+        [email],
+        fail_silently=False,
+    )
 
 
 @login_required

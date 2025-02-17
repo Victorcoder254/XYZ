@@ -97,11 +97,11 @@ class JobDescription(models.Model):
     ]
 
     business = models.ForeignKey(BusinessProfile, on_delete=models.CASCADE, related_name="job_descriptions", blank=True, null=True)
-    job_title = models.CharField(max_length=255, blank=True, null=True)
-    job_description = models.TextField(blank=True, null=True)
-    required_qualifications = models.TextField(blank=True, null=True)
+    job_title = models.CharField(max_length=255, blank=True, null=True)  # Remove blank=True, null=True to make it required
+    job_description = models.TextField(blank=True, null=True)  # Remove blank=True, null=True
+    required_qualifications = models.TextField(blank=True, null=True)  # Remove blank=True, null=True
     
-    # New fields
+    # Required fields
     employment_type = models.CharField(max_length=20, choices=EMPLOYMENT_TYPE_CHOICES, blank=True, null=True)
     job_category = models.CharField(max_length=20, choices=JOB_CATEGORY_CHOICES, blank=True, null=True)
     pay_grade = models.CharField(max_length=20, choices=PAY_GRADE_CHOICES, blank=True, null=True)
@@ -109,22 +109,26 @@ class JobDescription(models.Model):
     location_type = models.CharField(
         max_length=20,
         choices=[('remote', 'Remote'), ('hybrid', 'Hybrid'), ('onsite', 'On-site')],
-        default='onsite',
-        blank=True, 
-        null=True
+        default='onsite', blank=True, null=True
     )
     work_location = models.CharField(max_length=255, help_text="City, Country or Remote", blank=True, null=True)
     department = models.CharField(max_length=100, blank=True, null=True)
     skills_required = models.TextField(help_text="List key skills required for this position", blank=True, null=True)
-    benefits = models.TextField(blank=True, help_text="List job benefits and perks")
+    benefits = models.TextField(help_text="List job benefits and perks", blank=True, null=True)
     
     application_deadline = models.DateField(blank=True, null=True)
     colleges = models.ManyToManyField(College, related_name="job_listings")
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     is_active = models.BooleanField(default=True, blank=True, null=True)
 
     def __str__(self):
-        return self.job_title
+        return f"{self.business.business_name} - {self.job_title} - {self.created_at}"
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Job Description"
+        verbose_name_plural = "Job Descriptions"
+
 
 class CustomQuestion(models.Model):
     QUESTION_TYPE_CHOICES = [
@@ -143,10 +147,11 @@ class CustomQuestion(models.Model):
         blank=True, 
         help_text="For multiple choice questions, provide options as a JSON array"
     )
+    created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     order = models.IntegerField(default=0, help_text="Order in which questions should appear", blank=True, null=True)
 
     class Meta:
-        ordering = ['order']
+        ordering = ['-order']
 
     def __str__(self):
         return f"{self.job.job_title} - {self.question_text[:50]}"

@@ -20,6 +20,7 @@
   <script src="https://kit.fontawesome.com/42d5adcbca.js" crossorigin="anonymous"></script>
   <!-- CSS Files -->
   <link id="pagestyle" href="{% static 'files/assets/css/soft-ui-dashboard.css' %}" rel="stylesheet" />
+  <meta name="format-detection" content="date=no">
 </head>
 
 <body class="g-sidenav-show  bg-gray-100">
@@ -711,59 +712,183 @@
 
 <!-- Modal -->
 <div class="modal fade" id="customModal" tabindex="-1" aria-labelledby="customModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="customModalLabel">Create A Job Listing</h5>
+        <h5 class="modal-title" id="customModalLabel">Create A Job Listing - Step <span id="currentStep">1</span>/3</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <form method="POST">
+        <!-- Form wrapper -->
+        <form id="jobForm" method="POST">
           {% csrf_token %}
           <input type="hidden" name="form_type" value="job">
+          <input type="hidden" name="current_step" id="stepInput" value="1">
+          
+                    <!-- Step 1 Content --><!-- Step 1 Content -->
+          <div id="step1Content" class="step-content">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="job_title" class="form-label">Job Title*</label>
+                    <input type="text" id="job_title" name="job_title" class="form-control" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="department" class="form-label">Department*</label>
+                    <input type="text" id="department" name="department" class="form-control" required>
+                </div>
+            </div>
 
-          <div class="mb-3">
-            <label class="form-label">Job Title</label>
-            <input type="text" class="form-control" name="job_title" required>
-          </div>
+            <div class="mb-3">
+                <label for="job_description" class="form-label">Job Description*</label>
+                <textarea id="job_description" name="job_description" class="form-control" rows="4" required></textarea>
+            </div>
 
-          <div class="mb-3">
-            <label class="form-label">Job Description</label>
-            <textarea class="form-control" name="job_description" rows="3" required></textarea>
-          </div>
+            <div class="mb-3">
+                <label for="required_qualifications" class="form-label">Required Qualifications*</label>
+                <textarea id="required_qualifications" name="required_qualifications" class="form-control" rows="4" required></textarea>
+            </div>
 
-          <div class="mb-3">
-            <label class="form-label">Required Qualifications</label>
-            <textarea class="form-control" name="required_qualifications" rows="2" required></textarea>
-          </div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label for="employment_type" class="form-label">Employment Type*</label>
+                    <select id="employment_type" name="employment_type" class="form-select" required>
+                        <option value="">Select Type</option>
+                        {% for value, label in employment_types %}
+                            <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="job_category" class="form-label">Job Category*</label>
+                    <select id="job_category" name="job_category" class="form-select" required>
+                        <option value="">Select Category</option>
+                        {% for value, label in job_categories %}
+                            <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="pay_grade" class="form-label">Pay Grade*</label>
+                    <select id="pay_grade" name="pay_grade" class="form-select" required>
+                        <option value="">Select Grade</option>
+                        {% for value, label in pay_grades %}
+                            <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
 
-          <div class="mb-3">
-            <label class="form-label">Application Deadline</label>
-            <input type="date" class="form-control" name="application_deadline" required>
-          </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="salary_range" class="form-label">Salary Range*</label>
+                    <input type="text" id="salary_range" name="salary_range" class="form-control" 
+                          placeholder="e.g., $50,000 - $70,000" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="location_type" class="form-label">Location Type*</label>
+                    <select id="location_type" name="location_type" class="form-select" required>
+                        <option value="">Select Type</option>
+                        {% for value, label in location_types %}
+                            <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
 
-          <div class="mb-3">
-            <label class="form-label">Select Colleges</label>
-            <div class="border p-2" style="max-height: 200px; overflow-y: auto;">
-                {% for college in colleges %}
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="selected_colleges" value="{{ college.id }}" id="college{{ college.id }}">
-                        <label class="form-check-label" for="college{{ college.id }}">
-                            {{ college.name }}
-                        </label>
+            <div class="mb-3">
+                <label for="work_location" class="form-label">Work Location*</label>
+                <input type="text" id="work_location" name="work_location" class="form-control" 
+                      placeholder="City, Country or Remote" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="skills_required" class="form-label">Required Skills*</label>
+                <textarea id="skills_required" name="skills_required" class="form-control" rows="3" 
+                          placeholder="List key skills required for this position" required></textarea>
+            </div>
+
+            <div class="mb-3">
+                <label for="benefits" class="form-label">Benefits & Perks</label>
+                <textarea id="benefits" name="benefits" class="form-control" rows="3" 
+                          placeholder="List job benefits and perks"></textarea>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="application_deadline" class="form-label">Application Deadline*</label>
+                    <input type="date" id="application_deadline" name="application_deadline" class="form-control" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="d-block form-label" for="status">Status</label>
+                    <div class="form-check form-switch" id="status" name="status">
+                        <input type="checkbox" id="is_active" name="is_active" class="form-check-input" checked>
+                        <label for="is_active" class="form-check-label">Active</label>
                     </div>
-                {% endfor %}
+                </div>
             </div>
           </div>
 
-          <button type="submit" class="btn btn-primary">Post Job</button>
+          <!-- Step 2 Content -->
+          <div id="step2Content" class="step-content d-none">
+            <div class="alert alert-info mb-4">
+                <div class="d-flex">
+                    <i class="fa fa-info-circle me-2 mt-1"></i>
+                    <div>
+                        <h6 class="mb-1">Custom Application Questions</h6>
+                        <p class="mb-0">Add screening questions for candidates. You can create different types of questions including text answers, multiple choice, yes/no, or file upload requirements.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="questions-container">
+                <!-- Questions will be added here dynamically -->
+            </div>
+
+            <div class="text-center mt-4">
+                <button type="button" class="btn btn-primary" onclick="addQuestion()">
+                    <i class="fa fa-plus-circle me-2"></i>Add New Question
+                </button>
+            </div>
+          </div>
+
+          <!-- Step 3 Content -->
+          <div id="step3Content" class="step-content d-none">
+            <div class="mb-3">
+                <label for="collegeSelection" class="form-label">Select Target Colleges*</label>
+                <div id="collegeSelection" name="collegeSelection" class="border p-3" style="max-height: 300px; overflow-y: auto;">
+                    {% for college in colleges %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" 
+                                  name="selected_colleges" value="{{ college.id }}" 
+                                  id="college{{ college.id }}">
+                            <label class="form-check-label" for="college{{ college.id }}">
+                                {{ college.name }}
+                            </label>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+          </div>
+
+          <!-- Navigation Buttons -->
+          <div class="d-flex justify-content-between mt-4">
+            <button type="button" class="btn btn-secondary" id="prevBtn" onclick="prevStep()" style="display: none;">
+              Previous
+            </button>
+            <button type="button" class="btn btn-primary" id="nextBtn" onclick="nextStep()">
+              Next
+            </button>
+            <button type="submit" class="btn btn-success" id="submitBtn" style="display: none;">
+              Post Job
+            </button>
+          </div>
         </form>
       </div>
     </div>
   </div>
 </div>
 
-  <!--   Core JS Files   -->
+
 <!-- Profile Creation Modal -->
 {% if not profile_complete %}
 <div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
@@ -816,38 +941,301 @@
   </div>
 </div>
 
-<!-- Script to Auto Show Modal -->
+{% endif %} 
+
+
 <script>
-  document.addEventListener("DOMContentLoaded", function () {
-    var profileComplete = {{ profile_complete|yesno:"true,false" }};
-    if (!profileComplete) {
-      var myModal = new bootstrap.Modal(document.getElementById('profileModal'));
-      myModal.show();
+  // Global variables
+  let currentStep = 1;
+  let questionCount = 0;
+  
+  // Form validation function
+  function validateStep(step) {
+      if (step === 1) {
+          const requiredFields = [
+              'job_title', 'department', 'job_description', 
+              'required_qualifications', 'employment_type', 
+              'job_category', 'pay_grade', 'salary_range',
+              'location_type', 'work_location', 'skills_required',
+              'application_deadline'
+          ];
+  
+          for (const field of requiredFields) {
+              const element = document.querySelector(`[name="${field}"]`);
+              if (!element || !element.value.trim()) {
+                  alert(`Please fill in the ${field.replace('_', ' ')}`);
+                  element.focus();
+                  return false;
+              }
+          }
+          return true;
+      }
+      return true;
+  }
+  
+  // Form handling functions
+  function showStep(step) {
+      step = parseInt(step);
+      currentStep = step;
+  
+      document.querySelectorAll('.step-content').forEach(content => {
+          content.classList.add('d-none');
+      });
+  
+      document.getElementById(`step${step}Content`).classList.remove('d-none');
+      document.getElementById('currentStep').textContent = step;
+      document.getElementById('stepInput').value = step;
+  
+      // Update navigation buttons
+      document.getElementById('prevBtn').style.display = step === 1 ? 'none' : 'block';
+      document.getElementById('nextBtn').style.display = step === 3 ? 'none' : 'block';
+      document.getElementById('submitBtn').style.display = step === 3 ? 'block' : 'none';
+  }
+  
+  async function nextStep() {
+    if (validateStep(currentStep)) {
+        const formData = new FormData(document.getElementById('jobForm'));
+        formData.append('form_type', 'job');
+        formData.append('current_step', currentStep.toString());
+        
+        // If on step 2, collect and add questions data
+        if (currentStep === 2) {
+            const questionsData = [];
+            const cards = document.querySelectorAll('.card');
+            console.log(`Found ${cards.length} question cards`);
+            
+            cards.forEach((card, index) => {
+                const questionText = card.querySelector('textarea[name^="question_text_"]');
+                const questionType = card.querySelector('select[name^="question_type_"]');
+                const isRequired = card.querySelector('input[name^="is_required_"]');
+                const options = card.querySelector('input[name^="options_"]');
+
+                console.log(`Processing question ${index + 1}:`, {
+                    text: questionText?.value,
+                    type: questionType?.value,
+                    required: isRequired?.checked,
+                    options: options?.value
+                });
+
+                if (questionText?.value && questionType?.value) {
+                    questionsData.push({
+                        question_text: questionText.value,
+                        question_type: questionType.value,
+                        is_required: isRequired?.checked || false,
+                        options: options?.value || '',
+                        order: index
+                    });
+                }
+            });
+
+            console.log('Questions data being sent:', questionsData);
+            formData.append('questions_data', JSON.stringify(questionsData));
+            formData.append('question_count', questionsData.length.toString());
+        }
+
+        try {
+            console.log('Sending form data...');
+            const response = await fetch(window.location.href, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                credentials: 'same-origin'
+            });
+
+            const data = await response.json();
+            console.log('Server response:', data);
+
+            if (data.status === 'success') {
+                showStep(parseInt(data.step));
+            } else {
+                alert(data.message || 'An error occurred');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('An error occurred while processing your request');
+        }
     }
-  });
-</script>
+}
 
-{% endif %}  <!--   Core JS Files   -->
-
-
-
-<script>
-  document.getElementById("college-search").addEventListener("input", function() {
-      let filter = this.value.toLowerCase();
-      let select = document.getElementById("college-select");
-      for (let option of select.options) {
-          option.style.display = option.text.toLowerCase().includes(filter) ? "block" : "none";
+// Update addQuestion function to include proper name attributes and event handlers
+function addQuestion() {
+    const container = document.getElementById('questions-container');
+    const questionDiv = document.createElement('div');
+    questionDiv.className = 'card mb-3 border';
+    questionDiv.innerHTML = `
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="card-title mb-0">Question ${questionCount + 1}</h6>
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeQuestion(this)">
+                    <i class="fa fa-trash"></i>
+                </button>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Question Text*</label>
+                <textarea name="question_text_${questionCount}" 
+                          class="form-control" 
+                          required 
+                          rows="2"
+                          placeholder="Enter your question here..."></textarea>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Question Type*</label>
+                    <select name="question_type_${questionCount}" 
+                            class="form-select question-type" 
+                            onchange="toggleOptions(this)" 
+                            required>
+                        <option value="">Select question type</option>
+                        <option value="text">Text Answer</option>
+                        <option value="multiple_choice">Multiple Choice</option>
+                        <option value="yes_no">Yes/No</option>
+                        <option value="file_upload">File Upload</option>
+                    </select>
+                </div>
+                <div class="col-md-6 d-flex align-items-center">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" 
+                               type="checkbox" 
+                               name="is_required_${questionCount}" 
+                               checked>
+                        <label class="form-check-label">Required Question</label>
+                    </div>
+                </div>
+            </div>
+            <div class="options-container mt-3" style="display: none;">
+                <label class="form-label">Answer Options*</label>
+                <div class="input-group">
+                    <input type="text" 
+                           name="options_${questionCount}" 
+                           class="form-control" 
+                           placeholder="Enter options separated by commas">
+                    <button class="btn btn-outline-secondary" 
+                            type="button" 
+                            onclick="previewOptions(this)">
+                        <i class="fa fa-eye"></i>
+                    </button>
+                </div>
+                <div class="options-preview mt-2 small text-muted"></div>
+            </div>
+        </div>
+    `;
+    container.appendChild(questionDiv);
+    questionCount++;
+}
+  
+  function removeQuestion(button) {
+      button.closest('.card').remove();
+  }
+  
+  function toggleOptions(select) {
+      const optionsContainer = select.closest('.card-body').querySelector('.options-container');
+      optionsContainer.style.display = select.value === 'multiple_choice' ? 'block' : 'none';
+  }
+  
+  function previewOptions(button) {
+      const optionsInput = button.closest('.input-group').querySelector('input');
+      const previewDiv = button.closest('.options-container').querySelector('.options-preview');
+      const options = optionsInput.value.split(',').map(opt => opt.trim()).filter(opt => opt);
+  
+      previewDiv.innerHTML = options.length > 0 
+          ? '<strong>Preview:</strong><br>' + options.map((opt, i) => 
+              `<div class="form-check mt-1">
+                  <input class="form-check-input" type="radio" name="preview_${questionCount}" disabled>
+                  <label class="form-check-label">${opt}</label>
+              </div>`
+          ).join('')
+          : '<span class="text-danger">No options added yet</span>';
+  }
+  
+  // Form submission handler with validation
+  document.getElementById('jobForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+  
+      if (!validateStep(currentStep)) {
+          return;
+      }
+  
+      const formData = new FormData(this);
+      formData.append('form_type', 'job');
+      formData.append('current_step', currentStep.toString());
+  
+      // If on step 2, add questions data
+      if (currentStep === 2) {
+          const questionsData = [];
+          document.querySelectorAll('.card').forEach((card, index) => {
+              const questionText = card.querySelector(`[name="question_text_${index}"]`);
+              const questionType = card.querySelector(`[name="question_type_${index}"]`);
+              const isRequired = card.querySelector(`[name="is_required_${index}"]`);
+              const options = card.querySelector(`[name="options_${index}"]`);
+  
+              if (questionText && questionType && isRequired) {
+                  questionsData.push({
+                      question_text: questionText.value,
+                      question_type: questionType.value,
+                      is_required: isRequired.checked,
+                      options: options ? options.value : ''
+                  });
+              }
+          });
+          formData.append('questions_data', JSON.stringify(questionsData));
+      }
+  
+      // Log form data before submission
+      console.log('Submitting form data:');
+      for (let pair of formData.entries()) {
+          console.log(pair[0] + ': ' + pair[1]);
+      }
+  
+      try {
+          const response = await fetch(window.location.href, {
+              method: 'POST',
+              body: formData,
+              headers: {
+                  'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+              },
+              credentials: 'same-origin'
+          });
+  
+          const data = await response.json();
+          console.log('Response:', data);
+  
+          if (data.status === 'success') {
+              if (data.redirect) {
+                  window.location.href = data.redirect;
+              } else {
+                  showStep(parseInt(data.step));
+              }
+          } else {
+              alert(data.message || 'An error occurred');
+          }
+      } catch (error) {
+          console.error('Error:', error);
+          alert('An error occurred while processing your request');
       }
   });
   
-  document.getElementById("college-select").addEventListener("change", function() {
-      let selectedColleges = document.getElementById("selected-colleges");
-      selectedColleges.innerHTML = "";
-      for (let option of this.selectedOptions) {
-          selectedColleges.innerHTML += `<span class="badge bg-secondary m-1">${option.text} <button type="button" class="btn-close btn-sm"></button></span>`;
+  // Modal event handlers
+  document.getElementById('customModal').addEventListener('hidden.bs.modal', function () {
+      currentStep = 1;
+      showStep(1);
+      document.getElementById('questions-container').innerHTML = '';
+      questionCount = 0;
+      document.getElementById('jobForm').reset();
+  });
+  
+  // Initialize on page load
+  document.addEventListener('DOMContentLoaded', function() {
+      const profileComplete = {{ profile_complete|yesno:"true,false" }};
+      if (!profileComplete) {
+          const myModal = new bootstrap.Modal(document.getElementById('profileModal'));
+          myModal.show();
       }
+      showStep(1);
   });
   </script>
+ 
 <script src="{% static 'files/assets/js/core/popper.min.js' %}"></script>
 <script src="{% static 'files/assets/js/core/bootstrap.min.js' %}"></script>
 <script src="{% static 'files/assets/js/plugins/perfect-scrollbar.min.js' %}"></script>
