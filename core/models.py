@@ -69,6 +69,14 @@ class CPCProfile(models.Model):
     def __str__(self):
                 return self.college.name if self.college else "No College Assigned"
 
+class Faculty(models.Model):
+    cpc_profile = models.ForeignKey(CPCProfile, on_delete=models.CASCADE, related_name='faculties', blank=True, null=True)
+    name = models.CharField(max_length=255, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return self.name    
+
 
 class JobDescription(models.Model):
     EMPLOYMENT_TYPE_CHOICES = [
@@ -181,9 +189,11 @@ class CustomQuestion(models.Model):
 # Replace the Student model with StudentProfile
 class StudentProfile(models.Model):
     cpc_profile = models.ForeignKey(CPCProfile, on_delete=models.CASCADE, blank=True, null=True)
+    faculty = models.ForeignKey(Faculty, on_delete=models.SET_NULL, blank=True, null=True, related_name='student_profile')
     name = models.CharField(max_length=255, blank=True, null=True)
     email = models.EmailField(unique=True, blank=True, null=True)
     
+    academic_year = models.CharField(max_length=10, blank=True, null=True)
     # New profile fields
     phone_number = models.CharField(max_length=20, blank=True, null=True)
     education_level = models.CharField(
@@ -298,5 +308,22 @@ class CPCJobFilter(models.Model):
     def __str__(self):
         return f"Job Filter for {self.cpc_profile.college.name if self.cpc_profile.college else 'No College'}"
 
+
+
+class ExcelSheetUpload(models.Model):
+    cpc_profile = models.ForeignKey(CPCProfile, on_delete=models.CASCADE, related_name='excel_uploads', blank=True, null=True)
+    upload_date = models.DateTimeField(auto_now_add=True)
+    excel_file = models.FileField(upload_to='excel_sheets/')
+
+    def __str__(self):
+        return f"Excel Sheet Uploaded on {self.upload_date} for {self.cpc_profile}"
+
+
+class StudentEmail(models.Model):
+    excel_sheet = models.ForeignKey(ExcelSheetUpload, on_delete=models.CASCADE, related_name='student_emails', blank=True, null=True)
+    email = models.EmailField(unique=True)
+
+    def __str__(self):
+        return self.email
 
 

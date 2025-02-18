@@ -42,8 +42,6 @@ class StudentAdmin(admin.ModelAdmin):
 
 admin.site.register(StudentProfile, StudentAdmin)
 
-
-
 class CustomQuestionAdmin(admin.ModelAdmin):
     list_display = ("job", "created_at")
 
@@ -52,3 +50,21 @@ admin.site.register(CustomQuestion, CustomQuestionAdmin)
 @admin.register(CPCJobFilter)
 class CPCJobFilterAdmin(admin.ModelAdmin):
     list_display = ("cpc_profile", "minimum_salary")
+
+
+class ExcelSheetUploadAdmin(admin.ModelAdmin):
+    list_display = ("cpc_profile", "upload_date", "excel_file")
+
+admin.site.register(ExcelSheetUpload, ExcelSheetUploadAdmin)
+
+class StudentEmailAdmin(admin.ModelAdmin):
+    list_display = ("excel_sheet", "email")
+
+admin.site.register(StudentEmail, StudentEmailAdmin)
+
+
+class FacultyAdmin(admin.ModelAdmin):
+    list_display = ("name", "description", "cpc_profile")
+
+admin.site.register(Faculty, FacultyAdmin)
+

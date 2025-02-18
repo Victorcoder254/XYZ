@@ -10,11 +10,16 @@ from django.contrib.auth import login
 from core.models import *  # Import your custom User model
 from django.contrib import messages
 import datetime
+import urllib.parse
 from django.core.mail import send_mail
 from django.conf import settings#
 from django.http import JsonResponse
 from django.urls import reverse
 import json
+import openpyxl
+from django.db import IntegrityError
+from django.core.paginator import Paginator
+from django.db.models import Q
 
 def home_view(request):
     return render(request, "files/home.html")
@@ -115,7 +120,7 @@ def business_dashboard(request):
                         'skills_required': request.POST.get('skills_required', '').strip(),
                         'benefits': request.POST.get('benefits', '').strip(),
                         'application_deadline': request.POST.get('application_deadline', '').strip(),
-                        'is_active': request.POST.get('is_active') == 'on'
+                        'is_active': request.POST.get('is_active') == 'no'
                     }
 
                     # Validate required fields
@@ -213,6 +218,11 @@ def business_dashboard(request):
                             'status': 'error',
                             'message': 'Please select at least one college'
                         })
+                    
+                    # Set is_active to True
+                    job_data['is_active'] = True
+
+
 
                     # Create job
                     job = JobDescription.objects.create(
@@ -402,16 +412,149 @@ def cpc_dashboard(request):
     return render(request, "files/cpc_dashboard.html", context)
 
 
-# Student Email Submission View
-def submit_student_profile(request):
-    colleges = College.objects.all()
+
+@login_required
+@role_required("cpc_admin")
+def student_management(request):
+    cpc_profile = CPCProfile.objects.filter(user=request.user).first()
+    if not cpc_profile:
+        messages.error(request, "CPC profile not found. Please create one first.")
+        return redirect("cpc_dashboard")
+
+    faculties = Faculty.objects.filter(cpc_profile=cpc_profile)
+    student_profiles = StudentProfile.objects.filter(cpc_profile=cpc_profile)
+    excel_uploads = ExcelSheetUpload.objects.filter(cpc_profile=cpc_profile)
+    # Example: get number of job applications (if applicable)
+    # job_applications = JobApplication.objects.filter(cpc_profile=cpc_profile)
+    job_applications = []  # replace with your actual job application query if available
+
+    # Process search filters (from GET parameters)
+    q = request.GET.get("q", "").strip()
+    faculty_filter = request.GET.get("faculty_id", "").strip()
+    if q:
+        student_profiles = student_profiles.filter(
+            Q(name__icontains=q) |
+            Q(email__icontains=q) |
+            Q(course__icontains=q)
+        )
+    if faculty_filter:
+        student_profiles = student_profiles.filter(faculty__id=faculty_filter)
+
+    # Paginate the student profiles (10 per page)
+    paginator = Paginator(student_profiles.order_by('-created_at'), 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    if request.method == "POST":
+        form_type = request.POST.get("form_type")
+
+        if form_type == "create_faculty":
+            name = request.POST.get("name")
+            description = request.POST.get("description")
+
+            if not name or not description:
+                messages.error(request, "Name and description are required for faculty creation.")
+                return redirect("student_management")
+
+            Faculty.objects.create(cpc_profile=cpc_profile, name=name, description=description)
+            messages.success(request, "Faculty created successfully!")
+            return redirect("student_management")
+
+        elif form_type == "import_emails":
+            excel_file = request.FILES.get('excel_file')
+
+            if not excel_file:
+                messages.error(request, 'Please upload a valid Excel file.')
+                return redirect("student_management")
+
+            if not excel_file.name.endswith('.xlsx'):
+                messages.error(request, 'Please upload a valid Excel file.')
+                return redirect("student_management")
+
+            try:
+                workbook = openpyxl.load_workbook(excel_file)
+                sheet = workbook.active
+
+                # Create ExcelSheetUpload instance
+                excel_upload = ExcelSheetUpload.objects.create(cpc_profile=cpc_profile, excel_file=excel_file)
+
+                for row_num, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
+                    email = row[0]  # Assuming email is in the first column
+                    if not email:
+                        print(f"Row {row_num}: Skipping row with empty email.")
+                        continue
+                    email = email.strip()
+                    if StudentEmail.objects.filter(email=email).exists():
+                        print(f"Row {row_num}: Student with email {email} already exists.")
+                        continue
+                    try:
+                        student_email = StudentEmail.objects.create(excel_sheet=excel_upload, email=email)
+                        # Encode the email for URL safety
+                        encoded_email = urllib.parse.quote(email)
+                        # Use the college id of the CPC admin (retrieved from cpc_profile)
+                        college_id = cpc_profile.college.id
+                        # Generate invitation link with both parameters
+                        invitation_link = request.build_absolute_uri(
+                            reverse('submit_student_profile', args=[encoded_email, college_id])
+                        )
+                        subject = "Invitation to Create Your Student Profile"
+                        message = (
+                            f"Dear Student,\n\n"
+                            f"You are invited to create your student profile. Please click on the following link to proceed:\n\n"
+                            f"{invitation_link}\n\n"
+                            f"Note: If a profile associated with this email already exists, you will not be able to create a new one.\n\n"
+                            f"Best regards,\nYour CPC Admin"
+                        )
+                        send_mail(subject, message, settings.EMAIL_HOST_USER, [email], fail_silently=False)
+                        print(f"Row {row_num}: Invitation email sent successfully to {email}")
+                    except IntegrityError as e:
+                        print(f"Row {row_num}: IntegrityError - Email {email} already exists: {e}")
+                        continue
+                    except Exception as e:
+                        print(f"Row {row_num}: Error sending email to {email}: {e}")
+                        continue
+
+                messages.success(request, 'Student emails imported and invitations sent successfully!')
+                return redirect("student_management")
+
+            except Exception as e:
+                messages.error(request, f'Error importing emails: {str(e)}')
+                return redirect("student_management")
+
+    context = {
+        "cpc_profile": cpc_profile,
+        "faculties": faculties,
+        "student_profiles_count": student_profiles.count(),
+        "faculties_count": faculties.count(),
+        "job_applications_count": len(job_applications),  # or job_applications.count() if a queryset
+        "page_obj": page_obj,
+        "q": q,
+        "faculty_filter": faculty_filter,
+        "excel_uploads": excel_uploads,
+    }
+    return render(request, "files/student_management.html", context)
+
+
+def submit_student_profile(request, e_mail, college_id):
+    # Decode the email passed in the URL
+    decoded_email = urllib.parse.unquote(e_mail)
+    # Retrieve the specific college based on the college_id from the CPC admin invitation
+    college = get_object_or_404(College, id=college_id)
+    # Retrieve the associated CPC profile (assumes one CPCProfile per college)
+    cpc_profile = get_object_or_404(CPCProfile, college=college)
+    # Filter faculties belonging to that CPC profile
+    faculties = Faculty.objects.filter(cpc_profile=cpc_profile)
+    
+    # Check if a StudentProfile already exists for this email
+    if StudentProfile.objects.filter(email=decoded_email).exists():
+        messages.error(request, "A profile with this email already exists. You cannot create another.")
+        return redirect("login")  # or another appropriate view
 
     if request.method == "POST":
-        # Basic Information
         name = request.POST.get("name")
-        email = request.POST.get("email")
-        college_id = request.POST.get("college_id")
+        email = decoded_email
+        # Notice: no need to retrieve college_id from POST now.
         phone_number = request.POST.get("phone_number")
+        academic_year = request.POST.get("academic_year")
         
         # Educational Information
         education_level = request.POST.get("education_level")
@@ -424,27 +567,29 @@ def submit_student_profile(request):
         linkedin_profile = request.POST.get("linkedin_profile")
         github_profile = request.POST.get("github_profile")
         portfolio_website = request.POST.get("portfolio_website")
-
-        if not all([name, email, college_id, phone_number, education_level, course, graduation_year]):
-            messages.error(request, "Please fill in all required fields.")
-            return redirect("student_email_submission")
-
-        # Validate college and CPC profile
-        college = get_object_or_404(College, id=college_id)
-        cpc_profile = get_object_or_404(CPCProfile, college=college)
-
-        # Check if student profile already exists
+        
+        # Faculty selection remains (student must select a faculty)
+        faculty_id = request.POST.get("faculty_id")
+        if not all([name, email, phone_number, academic_year, education_level, course, graduation_year, faculty_id]):
+            messages.error(request, "Please fill in all required fields, including the faculty selection.")
+            return redirect("student_email_submission")  # Adjust redirect if needed
+        
+        # Retrieve the selected faculty and ensure it belongs to the same CPC profile.
+        faculty = get_object_or_404(Faculty, id=faculty_id, cpc_profile=cpc_profile)
+        
+        # Final check
         if StudentProfile.objects.filter(email=email).exists():
             messages.warning(request, "A profile with this email already exists.")
             return redirect("student_email_submission")
-
-        # Create student profile
+        
         try:
             StudentProfile.objects.create(
                 cpc_profile=cpc_profile,
+                faculty=faculty,
                 name=name,
                 email=email,
                 phone_number=phone_number,
+                academic_year=academic_year,
                 education_level=education_level,
                 course=course,
                 graduation_year=int(graduation_year),
@@ -459,8 +604,14 @@ def submit_student_profile(request):
         except Exception as e:
             messages.error(request, f"Error creating profile: {str(e)}")
             return redirect("student_email_submission")
-
-    return render(request, "files/student_email.html", {"colleges": colleges})
+    
+    # For GET requests, pass in the decoded email, the college (admin’s college) and the faculties
+    context = {
+        "decoded_email": decoded_email,
+        "college": college,
+        "faculties": faculties,
+    }
+    return render(request, "files/student_email.html", context)
 
 # Job Application Submission View
 def submit_job_application(request, job_id=None, email=None):

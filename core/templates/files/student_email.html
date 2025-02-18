@@ -1,35 +1,107 @@
 {% extends 'files/base1.html' %}
 
-{% block title %}Subscribe{% endblock %}
+{% block title %}Create Your Profile{% endblock %}
 
 {% block content %}
 <div class="container mt-5 d-flex justify-content-center">
     <div class="card shadow p-4" style="width: 100%; max-width: 500px;">
-        <h2 class="text-center text-orange">Subscribe for Job Alerts</h2>
+        <h2 class="text-center text-orange">Create Your Student Profile</h2>
         <form method="post">
             {% csrf_token %}
-
+            
+            <!-- Full Name -->
             <div class="mb-3">
-                <label for="name" class="form-label">Full Name</label>
+                <label for="name" class="form-label">Full Name*</label>
                 <input type="text" class="form-control" name="name" required>
             </div>
-
+            
+            <!-- Email (read-only, with hidden field for submission) -->
             <div class="mb-3">
-                <label for="email" class="form-label">Email Address</label>
-                <input type="email" class="form-control" name="email" required>
+                <label for="email_display" class="form-label">Email Address*</label>
+                <input type="email" class="form-control" id="email_display" value="{{ decoded_email }}" disabled>
+                <input type="hidden" name="email" value="{{ decoded_email }}">
             </div>
-
+            
+            <!-- College Display (read-only) -->
             <div class="mb-3">
-                <label for="college_id" class="form-label">Select Your College</label>
-                <select class="form-select" name="college_id" required>
-                    <option value="" disabled selected>Select College</option>
-                    {% for college in colleges %}
-                        <option value="{{ college.id }}">{{ college.name }}</option>
+                <label for="college_display" class="form-label">College*</label>
+                <input type="text" class="form-control" id="college_display" value="{{ college.name }}" disabled>
+                <input type="hidden" name="college_id" value="{{ college.id }}">
+            </div>
+            
+            
+            <!-- Faculty Selection -->
+            <div class="mb-3">
+                <label for="faculty_id" class="form-label">Select Your Faculty*</label>
+                <select class="form-select" name="faculty_id" required>
+                    <option value="" disabled selected>Select Faculty</option>
+                    {% for faculty in faculties %}
+                        <option value="{{ faculty.id }}">{{ faculty.name }}</option>
                     {% endfor %}
                 </select>
             </div>
-
-            <button type="submit" class="btn btn-dark w-100">Subscribe</button>
+            
+            <!-- Phone Number -->
+            <div class="mb-3">
+                <label for="phone_number" class="form-label">Phone Number*</label>
+                <input type="text" class="form-control" name="phone_number" required>
+            </div>
+            
+            <!-- Academic Year -->
+            <div class="mb-3">
+                <label for="academic_year" class="form-label">Academic Year*</label>
+                <input type="text" class="form-control" name="academic_year" required>
+            </div>
+            
+            <!-- Education Level -->
+            <div class="mb-3">
+                <label for="education_level" class="form-label">Education Level*</label>
+                <input type="text" class="form-control" name="education_level" required>
+            </div>
+            
+            <!-- Course -->
+            <div class="mb-3">
+                <label for="course" class="form-label">Course*</label>
+                <input type="text" class="form-control" name="course" required>
+            </div>
+            
+            <!-- Graduation Year -->
+            <div class="mb-3">
+                <label for="graduation_year" class="form-label">Graduation Year*</label>
+                <input type="number" class="form-control" name="graduation_year" required>
+            </div>
+            
+            <!-- Key Skills -->
+            <div class="mb-3">
+                <label for="skills" class="form-label">Key Skills*</label>
+                <textarea class="form-control" name="skills" rows="3"></textarea>
+            </div>
+            
+            <!-- Bio -->
+            <div class="mb-3">
+                <label for="bio" class="form-label">Bio*</label>
+                <textarea class="form-control" name="bio" rows="3"></textarea>
+            </div>
+            
+            <!-- LinkedIn Profile -->
+            <div class="mb-3">
+                <label for="linkedin_profile" class="form-label">LinkedIn Profile</label>
+                <input type="url" class="form-control" name="linkedin_profile">
+            </div>
+            
+            <!-- Github Profile -->
+            <div class="mb-3">
+                <label for="github_profile" class="form-label">Github Profile</label>
+                <input type="url" class="form-control" name="github_profile">
+            </div>
+            
+            <!-- Portfolio Website -->
+            <div class="mb-3">
+                <label for="portfolio_website" class="form-label">Portfolio Website</label>
+                <input type="url" class="form-control" name="portfolio_website">
+            </div>
+            
+            <button type="submit" class="btn btn-dark w-100">Create Profile</button>
         </form>
     </div>
 </div>
