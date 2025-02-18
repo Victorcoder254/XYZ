@@ -234,3 +234,69 @@ class QuestionResponse(models.Model):
 
     def __str__(self):
         return f"Response to {self.question.question_text[:30]} - {self.job_application}"
+
+
+class CPCJobFilter(models.Model):
+    cpc_profile = models.OneToOneField(CPCProfile, on_delete=models.CASCADE, related_name="job_filter", blank=True, null=True)
+    minimum_salary = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.00,
+        help_text="Minimum salary for job listings",
+        blank=True,
+        null=True
+    )
+
+    EMPLOYMENT_TYPE_CHOICES = [
+        ('full_time', 'Full Time'),
+        ('part_time', 'Part Time'),
+        ('contract', 'Contract'),
+        ('internship', 'Internship'),
+    ]
+    allowed_employment_types = models.JSONField(
+        blank=True,
+        null=True,
+        help_text="Specific employment types allowed (JSON array)"
+    )
+
+    JOB_CATEGORY_CHOICES = [
+        ('tech', 'Technology'),
+        ('finance', 'Finance'),
+        ('healthcare', 'Healthcare'),
+        ('education', 'Education'),
+        ('marketing', 'Marketing'),
+        ('sales', 'Sales'),
+        ('other', 'Other'),
+        ('engineering', 'Engineering'),
+        ('accounting', 'Accounting'),
+        ('human_resources', 'Human Resources'),
+        ('customer_service', 'Customer Service'),
+        ('research', 'Research'),
+        ('art_design', 'Art & Design'),
+        ('writing_editing', 'Writing & Editing'),
+        ('legal', 'Legal'),
+        ('manufacturing', 'Manufacturing'),
+        ('transportation', 'Transportation'),
+        ('construction', 'Construction'),
+        ('hospitality', 'Hospitality'),
+        ('retail', 'Retail'),
+        ('government', 'Government'),
+        ('nonprofit', 'Nonprofit'),
+    ]
+    allowed_job_categories = models.JSONField(
+        blank=True,
+        null=True,
+        help_text="Specific job categories allowed (JSON array)"
+    )
+    custom_job_categories = models.JSONField(
+        blank=True,
+        null=True,
+        help_text="Enter custom job categories (JSON array)"
+    )
+    # Add other filter criteria as needed (e.g., skills, experience level)
+    
+    def __str__(self):
+        return f"Job Filter for {self.cpc_profile.college.name if self.cpc_profile.college else 'No College'}"
+
+
+

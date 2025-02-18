@@ -868,23 +868,60 @@
           </div>
 
           <!-- Step 3 Content -->
-          <div id="step3Content" class="step-content d-none">
-            <div class="mb-3">
-                <label for="collegeSelection" class="form-label">Select Target Colleges*</label>
-                <div id="collegeSelection" name="collegeSelection" class="border p-3" style="max-height: 300px; overflow-y: auto;">
-                    {% for college in colleges %}
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" 
-                                  name="selected_colleges" value="{{ college.id }}" 
-                                  id="college{{ college.id }}">
-                            <label class="form-check-label" for="college{{ college.id }}">
-                                {{ college.name }}
-                            </label>
-                        </div>
-                    {% endfor %}
-                </div>
-            </div>
+<!-- Step 3 Content -->
+<div id="step3Content" class="step-content d-none">
+  <div class="mb-3">
+      <label for="collegeSelection" class="form-label">Select Target Colleges*</label>
+      <div id="collegeSelection" name="collegeSelection" class="border p-3" style="max-height: 300px; overflow-y: auto;">
+          
+          <h6 class="mb-2">Suggested Colleges:</h6>
+          <div id="suggestedColleges">
+              <!-- Suggested colleges will be added here -->
           </div>
+          <hr>
+
+          <h6 class="mb-2">All Colleges:</h6>
+          {% for college in colleges %}
+              <div class="form-check d-flex justify-content-between align-items-center">
+                  <div>
+                      <input class="form-check-input" type="checkbox" 
+                             name="selected_colleges" value="{{ college.id }}" 
+                             id="college{{ college.id }}">
+                      <label class="form-check-label" for="college{{ college.id }}">
+                          {{ college.name }}
+                      </label>
+                  </div>
+                  <button type="button" class="btn btn-sm btn-outline-info" onclick="toggleFilter('filter{{ college.id }}')">
+                      <i class="fa fa-filter"></i>
+                  </button>
+              </div>
+              <div id="filter{{ college.id }}" class="mt-2 cpc-filter-info d-none" 
+                   data-minimum-salary="{% for cpc_job_filter in cpc_job_filters %}{% if cpc_job_filter.cpc_profile.college == college %}{{ cpc_job_filter.minimum_salary|default:0 }}{% endif %}{% endfor %}"
+                   data-allowed-employment-types="{% for cpc_job_filter in cpc_job_filters %}{% if cpc_job_filter.cpc_profile.college == college %}{{ cpc_job_filter.allowed_employment_types|default:''|stringformat:'s' }}{% endif %}{% endfor %}"
+                   data-allowed-job-categories="{% for cpc_job_filter in cpc_job_filters %}{% if cpc_job_filter.cpc_profile.college == college %}{{ cpc_job_filter.allowed_job_categories|default:''|stringformat:'s' }}{% endif %}{% endfor %}"
+                   data-custom-job-categories="{% for cpc_job_filter in cpc_job_filters %}{% if cpc_job_filter.cpc_profile.college == college %}{{ cpc_job_filter.custom_job_categories|default:''|stringformat:'s' }}{% endif %}{% endfor %}">
+                  {% for cpc_job_filter in cpc_job_filters %}
+                      {% if cpc_job_filter.cpc_profile.college == college %}
+                          <h6 class="mb-1">CPC Job Filter:</h6>
+                          {% if cpc_job_filter.minimum_salary %}
+                              <p><i class="fa fa-money me-1"></i> Minimum Salary: ${{ cpc_job_filter.minimum_salary }}</p>
+                          {% endif %}
+                          {% if cpc_job_filter.allowed_employment_types %}
+                              <p><i class="fa fa-clock-o me-1"></i> Allowed Employment Types: {{ cpc_job_filter.allowed_employment_types|join:", " }}</p>
+                          {% endif %}
+                          {% if cpc_job_filter.allowed_job_categories %}
+                              <p><i class="fa fa-folder-open-o me-1"></i> Allowed Job Categories: {{ cpc_job_filter.allowed_job_categories|join:", " }}</p>
+                          {% endif %}
+                          {% if cpc_job_filter.custom_job_categories %}
+                              <p><i class="fa fa-tags me-1"></i> Custom Job Categories: {{ cpc_job_filter.custom_job_categories|join:", " }}</p>
+                          {% endif %}
+                      {% endif %}
+                  {% endfor %}
+              </div>
+          {% endfor %}
+      </div>
+  </div>
+</div>
 
           <!-- Navigation Buttons -->
           <div class="d-flex justify-content-between mt-4">
@@ -961,6 +998,80 @@
 
 
 <script>
+  function toggleFilter(filterId) {
+      const filterDiv = document.getElementById(filterId);
+      filterDiv.classList.toggle('d-none');
+  }
+</script>
+
+<style>
+  .cpc-filter-info {
+      border: 1px solid #ddd;
+      padding: 10px;
+      margin-top: 5px;
+      border-radius: 5px;
+  }
+</style>
+
+
+<script>
+function suggestColleges() {
+    // Get job details from Step 1
+    const employmentType = document.getElementById('employment_type').value;
+    const jobCategorySelect = document.getElementById('job_category_select');
+    const jobCategory = jobCategorySelect.value === 'custom' ? document.getElementById('job_category').value : jobCategorySelect.value;
+    const minimumPay = parseFloat(document.getElementById('minimum_pay').value);
+
+    // Get all colleges
+    const collegeSelection = document.getElementById('collegeSelection');
+    const allCollegesDiv = collegeSelection.querySelector('h6:last-of-type').nextElementSibling;
+    const suggestedCollegesDiv = document.getElementById('suggestedColleges');
+    suggestedCollegesDiv.innerHTML = ''; // Clear previous suggestions
+
+    // Get all college elements
+    const collegeElements = document.querySelectorAll('.form-check');
+    
+    collegeElements.forEach(collegeDiv => {
+        const collegeId = collegeDiv.querySelector('input[name="selected_colleges"]').value;
+        const filterDiv = document.getElementById(`filter${collegeId}`);
+        
+        // Only process colleges that have filters
+        if (filterDiv && filterDiv.hasAttribute('data-minimum-salary')) {
+            const minimumSalary = parseFloat(filterDiv.dataset.minimumSalary);
+            const allowedEmploymentTypes = filterDiv.dataset.allowedEmploymentTypes;
+            const allowedJobCategories = filterDiv.dataset.allowedJobCategories;
+            const customJobCategories = filterDiv.dataset.customJobCategories;
+
+            // Check if the job meets all filter criteria
+            const minimumPayMatch = minimumPay >= minimumSalary;
+            const employmentTypeMatch = allowedEmploymentTypes.includes(employmentType);
+            const jobCategoryMatch = allowedJobCategories.includes(jobCategory) || 
+                                   customJobCategories.includes(jobCategory);
+
+            // If all criteria match, move the college to suggested section
+            if (minimumPayMatch && employmentTypeMatch && jobCategoryMatch) {
+                const collegeCopy = collegeDiv.cloneNode(true);
+                suggestedCollegesDiv.appendChild(collegeCopy);
+                
+                // Add click handler to sync checkbox states
+                const originalCheckbox = collegeDiv.querySelector('input[type="checkbox"]');
+                const copiedCheckbox = collegeCopy.querySelector('input[type="checkbox"]');
+                
+                copiedCheckbox.addEventListener('change', () => {
+                    originalCheckbox.checked = copiedCheckbox.checked;
+                });
+                originalCheckbox.addEventListener('change', () => {
+                    copiedCheckbox.checked = originalCheckbox.checked;
+                });
+            }
+        }
+    });
+
+    // Show message if no colleges match
+    if (suggestedCollegesDiv.children.length === 0) {
+        suggestedCollegesDiv.innerHTML = '<p class="text-muted">No colleges match your job criteria</p>';
+    }
+}
   // Global variables
   let currentStep = 1;
   let questionCount = 0;
@@ -976,6 +1087,13 @@ function handleCategoryChange(selectElement) {
         customInput.value = selectElement.value;
     }
 }
+
+document.getElementById('nextBtn').addEventListener('click', function() {
+    if (currentStep === 1) {
+        suggestColleges();
+    }
+    nextStep();
+});
 
 // Update the validateStep function to include minimum/maximum pay validation
 function validateStep(step) {

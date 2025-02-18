@@ -49,4 +49,6 @@ class CustomQuestionAdmin(admin.ModelAdmin):
 
 admin.site.register(CustomQuestion, CustomQuestionAdmin)
 
-
+@admin.register(CPCJobFilter)
+class CPCJobFilterAdmin(admin.ModelAdmin):
+    list_display = ("cpc_profile", "minimum_salary")

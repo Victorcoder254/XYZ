@@ -79,6 +79,7 @@ def business_dashboard(request):
     profile_complete = False
     jobs = None
     colleges = College.objects.all()
+    cpc_job_filters = CPCJobFilter.objects.all()
 
     if hasattr(request.user, "business_profile"):
         profile_complete = True
@@ -260,7 +261,8 @@ def business_dashboard(request):
         "employment_types": JobDescription.EMPLOYMENT_TYPE_CHOICES,
         "job_categories": JobDescription.JOB_CATEGORY_CHOICES,
         "pay_grades": JobDescription.PAY_GRADE_CHOICES,
-        "location_types": [('remote', 'Remote'), ('hybrid', 'Hybrid'), ('onsite', 'On-site')]
+        "location_types": [('remote', 'Remote'), ('hybrid', 'Hybrid'), ('onsite', 'On-site')],
+        "cpc_job_filters": cpc_job_filters,
     }
 
     return render(request, "files/business_dashboard.html", context)
@@ -315,12 +317,13 @@ Best regards,
 def cpc_dashboard(request):
     cpc_profile = CPCProfile.objects.filter(user=request.user).first()
     colleges = College.objects.all()
+    cpc_job_filter = CPCJobFilter.objects.filter(cpc_profile=cpc_profile).first()
 
     if request.method == "POST":
         form_type = request.POST.get("form_type")
 
         if form_type == "cpc_profile":
-            college_id = request.POST.get("college_id")  
+            college_id = request.POST.get("college_id")
             location = request.POST.get("location")
             major_field = request.POST.get("major_field")
 
@@ -336,7 +339,8 @@ def cpc_dashboard(request):
                 return redirect("cpc_dashboard")
 
             # Check if this college is already assigned to a CPC admin
-            existing_cpc = CPCProfile.objects.filter(college=college).exclude(user=request.user).first()
+            existing_cpc = CPCProfile.objects.filter(college=college).exclude(
+                user=request.user).first()
             if existing_cpc:
                 messages.error(request, "This college already has a CPC admin.")
                 return redirect("cpc_dashboard")
@@ -350,7 +354,7 @@ def cpc_dashboard(request):
                 messages.success(request, "Profile updated successfully!")
             else:
                 # Create new profile
-                CPCProfile.objects.create(
+                cpc_profile = CPCProfile.objects.create(
                     user=request.user,
                     college=college,
                     location=location,
@@ -360,10 +364,40 @@ def cpc_dashboard(request):
 
             return redirect("cpc_dashboard")
 
+        elif form_type == "cpc_job_filter":
+            minimum_salary = request.POST.get("minimum_salary")
+            allowed_employment_types = request.POST.getlist("allowed_employment_types")
+            allowed_job_categories = request.POST.getlist("allowed_job_categories")
+            custom_job_categories = request.POST.getlist("custom_job_categories")
+
+            if cpc_job_filter:
+                # Update existing filter
+                cpc_job_filter.minimum_salary = minimum_salary
+                cpc_job_filter.allowed_employment_types = allowed_employment_types
+                cpc_job_filter.allowed_job_categories = allowed_job_categories
+                cpc_job_filter.custom_job_categories = custom_job_categories
+                cpc_job_filter.save()
+                messages.success(request, "Job filter updated successfully!")
+            else:
+                # Create new filter
+                CPCJobFilter.objects.create(
+                    cpc_profile=cpc_profile,
+                    minimum_salary=minimum_salary,
+                    allowed_employment_types=allowed_employment_types,
+                    allowed_job_categories=allowed_job_categories,
+                    custom_job_categories=custom_job_categories
+                )
+                messages.success(request, "Job filter created successfully!")
+
+            return redirect("cpc_dashboard")
+
     context = {
-        "cpc_profile": cpc_profile, 
+        "cpc_profile": cpc_profile,
         "colleges": colleges,
-        "selected_college": cpc_profile.college if cpc_profile else None
+        "selected_college": cpc_profile.college if cpc_profile else None,
+        "cpc_job_filter": cpc_job_filter,
+        "employment_type_choices": CPCJobFilter.EMPLOYMENT_TYPE_CHOICES,
+        "job_category_choices": CPCJobFilter.JOB_CATEGORY_CHOICES,
     }
     return render(request, "files/cpc_dashboard.html", context)
 
