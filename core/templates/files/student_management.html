@@ -64,7 +64,7 @@
                             </div>
                             <div class="col-6">
                                 <button type="button" class="btn btn-sm bg-gradient-info w-100 py-3 mb-2" data-bs-toggle="modal" data-bs-target="#importEmailsModal">
-                                    <i class="fa fa-upload fa-xs me-1"></i> Upload Emails
+                                    <i class="fa fa-envelope fa-xs me-1"></i>  Invite Students
                                 </button>
                             </div>
                             <!-- Second Row of Buttons -->
@@ -74,8 +74,8 @@
                                 </button>
                             </div>
                             <div class="col-6">
-                                <button type="button" class="btn btn-sm bg-gradient-warning w-100 py-3 mb-2" data-bs-toggle="modal" data-bs-target="#inviteStudentsModal">
-                                    <i class="fa fa-envelope fa-xs me-1"></i> Invite Students
+                                <button type="button" class="btn btn-sm bg-gradient-warning w-100 py-3 mb-2" data-bs-toggle="modal" data-bs-target="#sendEmailModal">
+                                    <i class="fa fa-envelope fa-xs me-1"></i> Send Emails
                                 </button>
                             </div>
                         </div>
@@ -177,6 +177,44 @@
               </div>
           </div>
       </div>
+      <!-- Pagination -->
+      <nav aria-label="Student profiles pagination">
+      <ul class="pagination justify-content-center">
+      {% if page_obj.has_previous %}
+      <li class="page-item">
+      <a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ q }}&faculty_id={{ faculty_filter }}" aria-label="Previous">
+      <span aria-hidden="true">&laquo;</span>
+      </a>
+      </li>
+      {% else %}
+      <li class="page-item disabled">
+      <span class="page-link" aria-hidden="true">&laquo;</span>
+      </li>
+      {% endif %}
+      
+      {% for i in page_obj.paginator.page_range %}
+      {% if page_obj.number == i %}
+      <li class="page-item active" aria-current="page">
+      <span class="page-link">{{ i }}</span>
+      </li>
+      {% else %}
+      <li class="page-item"><a class="page-link" href="?page={{ i }}&q={{ q }}&faculty_id={{ faculty_filter }}">{{ i }}</a></li>
+      {% endif %}
+      {% endfor %}
+      
+      {% if page_obj.has_next %}
+      <li class="page-item">
+      <a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ q }}&faculty_id={{ faculty_filter }}" aria-label="Next">
+      <span aria-hidden="true">&raquo;</span>
+      </a>
+      </li>
+      {% else %}
+      <li class="page-item disabled">
+      <span class="page-link" aria-hidden="true">&raquo;</span>
+      </li>
+      {% endif %}
+      </ul>
+      </nav>
   </div>
   <!-- Student Details Container (Initially Hidden) -->
 <div id="studentDetailsContainer" class="container-fluid p-4" style="display: none;">
@@ -239,58 +277,215 @@
           </div>
       </div>
   </div>
-  
-      <!-- Create Faculty Modal -->
-      <div class="modal fade" id="createFacultyModal" tabindex="-1" aria-labelledby="createFacultyModalLabel" aria-hidden="true">
-          <div class="modal-dialog">
-              <div class="modal-content">
-                  <div class="modal-header">
-                      <h5 class="modal-title" id="createFacultyModalLabel">Create Faculty</h5>
-                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                  </div>
-                  <div class="modal-body">
-                      <form method="post">
-                          {% csrf_token %}
-                          <input type="hidden" name="form_type" value="create_faculty">
-                          <div class="mb-3">
-                              <label for="facultyName" class="form-label">Name</label>
-                              <input type="text" class="form-control" id="facultyName" name="name" required>
-                          </div>
-                          <div class="mb-3">
-                              <label for="facultyDescription" class="form-label">Description</label>
-                              <textarea class="form-control" id="facultyDescription" name="description" rows="3" required></textarea>
-                          </div>
-                          <button type="submit" class="btn btn-primary">Create</button>
-                      </form>
-                  </div>
-              </div>
-          </div>
-      </div>
-  
-      <!-- Import Emails Modal -->
-      <div class="modal fade" id="importEmailsModal" tabindex="-1" aria-labelledby="importEmailsModalLabel" aria-hidden="true">
-          <div class="modal-dialog">
-              <div class="modal-content">
-                  <div class="modal-header">
-                      <h5 class="modal-title" id="importEmailsModalLabel">Import Student Emails</h5>
-                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                  </div>
-                  <div class="modal-body">
-                      <form method="post" enctype="multipart/form-data">
-                          {% csrf_token %}
-                          <input type="hidden" name="form_type" value="import_emails">
-                          <div class="mb-3">
-                              <label for="excelFile" class="form-label">Excel File</label>
-                              <input class="form-control" type="file" id="excelFile" name="excel_file" required>
-                          </div>
-                          <button type="submit" class="btn btn-success">Import</button>
-                      </form>
-                  </div>
-              </div>
-          </div>
-      </div>
+  <!-- Create Faculty Modal -->
+<div class="modal fade" id="createFacultyModal" tabindex="-1" aria-labelledby="createFacultyModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createFacultyModalLabel">Create Faculty</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Information Alert Card -->
+                <div class="alert alert-info" role="alert">
+                    <h6 class="alert-heading mb-1"><i class="fa fa-info-circle me-2"></i>Creating Academic Faculties</h6>
+                    <hr class="my-2">
+                    <p class="mb-1 small">Create faculties based on your institution's academic structure:</p>
+                    <ul class="mb-1 small ps-3">
+                        <li>By Academic Level:
+                            <ul>
+                                <li>Diploma Programs</li>
+                                <li>Undergraduate Programs</li>
+                                <li>Postgraduate Programs</li>
+                            </ul>
+                        </li>
+                        <li>By Field of Study:
+                            <ul>
+                                <li>School of Engineering & Technology</li>
+                                <li>School of Business</li>
+                                <li>School of Computing & IT</li>
+                                <li>School of Arts & Social Sciences</li>
+                            </ul>
+                        </li>
+                    </ul>
+                    <p class="mb-0 small text-muted fst-italic">Note: Structure your faculties to match your institution's organizational hierarchy for better student management.</p>
+                </div>
+
+                <!-- Create Faculty Form -->
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="create_faculty">
+                    <div class="mb-3">
+                        <label for="facultyName" class="form-label">Faculty Name*</label>
+                        <input type="text" class="form-control" id="facultyName" name="name" placeholder="e.g., School of Engineering" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="facultyDescription" class="form-label">Description*</label>
+                        <textarea class="form-control" id="facultyDescription" name="description" rows="3" 
+                            placeholder="Describe the faculty's academic focus, programs offered, or any other relevant information" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa fa-plus me-2"></i>Create Faculty
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+  <!-- Import Emails Modal -->
+<div class="modal fade" id="importEmailsModal" tabindex="-1" aria-labelledby="importEmailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="importEmailsModalLabel">Invite Students</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Information Alert Card -->
+                <div class="alert alert-info" role="alert">
+                    <h6 class="alert-heading mb-1"><i class="fa fa-info-circle me-2"></i>How to Invite Students</h6>
+                    <hr class="my-2">
+                    <p class="mb-1 small">Follow these steps to invite students:</p>
+                    <ol class="mb-1 small ps-3">
+                        <li>Prepare an Excel file (.xlsx) containing student email addresses in the first column</li>
+                        <li>Upload the Excel file using the form below</li>
+                        <li>Click "Import" to send invitation emails automatically</li>
+                    </ol>
+                    <p class="mb-0 small text-muted fst-italic">Note: Each student will receive a unique invitation link to create their profile.</p>
+                </div>
+
+                <!-- Upload Form -->
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="import_emails">
+                    <div class="mb-3">
+                        <label for="excelFile" class="form-label">Excel File</label>
+                        <input class="form-control" type="file" id="excelFile" name="excel_file" accept=".xlsx" required>
+                        <div class="form-text">Only .xlsx files are supported</div>
+                    </div>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fa fa-upload me-2"></i>Import and Send Invitations
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
   </div>
 </div>
+
+
+<!-- View/Edit Faculties Modal -->
+<div class="modal fade" id="viewEditFacultiesModal" tabindex="-1" aria-labelledby="viewEditFacultiesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="viewEditFacultiesModalLabel"><i class="fa fa-university me-2"></i>View/Edit Faculties</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                {% if faculties %}
+                <div class="accordion" id="facultiesAccordion">
+                    {% for faculty in faculties %}
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="heading{{ faculty.id }}">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ faculty.id }}" aria-expanded="false" aria-controls="collapse{{ faculty.id }}" style="font-size: 1rem;">
+                                <i class="fa fa-chevron-down me-2"></i>{{ faculty.name }}
+                            </button>
+                        </h2>
+                        <div id="collapse{{ faculty.id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ faculty.id }}" data-bs-parent="#facultiesAccordion">
+                            <div class="accordion-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p><strong>Description:</strong> {{ faculty.description }}</p>
+                                        <p><strong>Number of Students:</strong> <span class="badge bg-success"><i class="fas fa-user-graduate me-1"></i> {{ faculty.num_students }}</span></p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <!-- Edit Faculty Form (Hidden by default) -->
+                                        <form method="post" action="{% url 'edit_faculty' faculty.id %}" style="display: none;" id="editFacultyForm{{ faculty.id }}">
+                                            {% csrf_token %}
+                                            <div class="mb-3">
+                                                <label for="editFacultyName{{ faculty.id }}" class="form-label">Faculty Name</label>
+                                                <input type="text" class="form-control" id="editFacultyName{{ faculty.id }}" name="name" value="{{ faculty.name }}" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="editFacultyDescription{{ faculty.id }}" class="form-label">Description</label>
+                                                <textarea class="form-control" id="editFacultyDescription{{ faculty.id }}" name="description" rows="3" required>{{ faculty.description }}</textarea>
+                                            </div>
+                                            <button type="submit" class="btn btn-success btn-sm"><i class="fa fa-save me-1"></i>Save Changes</button>
+                                            <button type="button" class="btn btn-secondary btn-sm cancel-edit-btn" data-faculty-id="{{ faculty.id }}"><i class="fa fa-times me-1"></i>Cancel</button>
+                                        </form>
+                                        <!-- Edit Button -->
+                                        <div class="d-grid gap-2">
+                                            <button type="button" class="btn btn-outline-primary btn-sm edit-faculty-btn" data-faculty-id="{{ faculty.id }}"><i class="fa fa-edit me-4"></i>Edit</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p>No faculties found.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="modal fade" id="sendEmailModal" tabindex="-1" aria-labelledby="sendEmailModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="sendEmailModalLabel"><i class="fa fa-envelope me-2"></i>Send Email</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="sendEmailForm" method="post" action="{% url 'send_email' %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="recipientEmail" class="form-label">Recipient Email</label>
+                        <input type="email" class="form-control" id="recipientEmail" name="recipient_email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="emailSubject" class="form-label">Subject</label>
+                        <input type="text" class="form-control" id="emailSubject" name="subject" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="emailMessage" class="form-label">Message</label>
+                        <textarea class="form-control" id="emailMessage" name="message" rows="5" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary"><i class="fa fa-paper-plane me-2"></i>Send</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Edit Faculty Functionality
+    document.querySelectorAll(".edit-faculty-btn").forEach(button => {
+        button.addEventListener("click", function() {
+            const facultyId = this.getAttribute("data-faculty-id");
+            const form = document.getElementById(`editFacultyForm${facultyId}`);
+            form.style.display = "block";
+        });
+    });
+
+    // Cancel Edit Functionality
+    document.querySelectorAll(".cancel-edit-btn").forEach(button => {
+        button.addEventListener("click", function() {
+            const facultyId = this.getAttribute("data-faculty-id");
+            const form = document.getElementById(`editFacultyForm${facultyId}`);
+            form.style.display = "none";
+        });
+    });
+});
+</script>
 
 <script>
       document.addEventListener("DOMContentLoaded", function() {

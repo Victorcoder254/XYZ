@@ -21,6 +21,7 @@ from django.db import IntegrityError
 from django.core.paginator import Paginator
 from django.db.models import Q
 
+
 def home_view(request):
     return render(request, "files/home.html")
 
@@ -413,6 +414,8 @@ def cpc_dashboard(request):
 
 
 
+from django.db.models import Count
+
 @login_required
 @role_required("cpc_admin")
 def student_management(request):
@@ -421,14 +424,11 @@ def student_management(request):
         messages.error(request, "CPC profile not found. Please create one first.")
         return redirect("cpc_dashboard")
 
-    faculties = Faculty.objects.filter(cpc_profile=cpc_profile)
+    faculties = Faculty.objects.filter(cpc_profile=cpc_profile).annotate(num_students=Count('student_profile'))
     student_profiles = StudentProfile.objects.filter(cpc_profile=cpc_profile)
     excel_uploads = ExcelSheetUpload.objects.filter(cpc_profile=cpc_profile)
-    # Example: get number of job applications (if applicable)
-    # job_applications = JobApplication.objects.filter(cpc_profile=cpc_profile)
-    job_applications = []  # replace with your actual job application query if available
+    job_applications = []
 
-    # Process search filters (from GET parameters)
     q = request.GET.get("q", "").strip()
     faculty_filter = request.GET.get("faculty_id", "").strip()
     if q:
@@ -440,10 +440,10 @@ def student_management(request):
     if faculty_filter:
         student_profiles = student_profiles.filter(faculty__id=faculty_filter)
 
-    # Paginate the student profiles (10 per page)
     paginator = Paginator(student_profiles.order_by('-created_at'), 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
+
     if request.method == "POST":
         form_type = request.POST.get("form_type")
 
@@ -474,11 +474,10 @@ def student_management(request):
                 workbook = openpyxl.load_workbook(excel_file)
                 sheet = workbook.active
 
-                # Create ExcelSheetUpload instance
                 excel_upload = ExcelSheetUpload.objects.create(cpc_profile=cpc_profile, excel_file=excel_file)
 
                 for row_num, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
-                    email = row[0]  # Assuming email is in the first column
+                    email = row[0]
                     if not email:
                         print(f"Row {row_num}: Skipping row with empty email.")
                         continue
@@ -488,11 +487,8 @@ def student_management(request):
                         continue
                     try:
                         student_email = StudentEmail.objects.create(excel_sheet=excel_upload, email=email)
-                        # Encode the email for URL safety
                         encoded_email = urllib.parse.quote(email)
-                        # Use the college id of the CPC admin (retrieved from cpc_profile)
                         college_id = cpc_profile.college.id
-                        # Generate invitation link with both parameters
                         invitation_link = request.build_absolute_uri(
                             reverse('submit_student_profile', args=[encoded_email, college_id])
                         )
@@ -525,13 +521,61 @@ def student_management(request):
         "faculties": faculties,
         "student_profiles_count": student_profiles.count(),
         "faculties_count": faculties.count(),
-        "job_applications_count": len(job_applications),  # or job_applications.count() if a queryset
+        "job_applications_count": len(job_applications),
         "page_obj": page_obj,
         "q": q,
         "faculty_filter": faculty_filter,
         "excel_uploads": excel_uploads,
     }
     return render(request, "files/student_management.html", context)
+
+
+from django.shortcuts import get_object_or_404, redirect
+
+@login_required
+@role_required("cpc_admin")
+def edit_faculty(request, faculty_id):
+    faculty = get_object_or_404(Faculty, id=faculty_id, cpc_profile__user=request.user)
+
+    if request.method == "POST":
+        name = request.POST.get("name")
+        description = request.POST.get("description")
+
+        if not name or not description:
+            messages.error(request, "Name and description are required.")
+            return redirect("student_management")
+
+        faculty.name = name
+        faculty.description = description
+        faculty.save()
+        messages.success(request, "Faculty updated successfully!")
+        return redirect("student_management")
+
+    messages.error(request, "Invalid request.")
+    return redirect("student_management")
+
+@login_required
+@role_required("cpc_admin")
+def send_email(request):
+    if request.method == "POST":
+        recipient_email = request.POST.get("recipient_email")
+        subject = request.POST.get("subject")
+        message = request.POST.get("message")
+
+        if not recipient_email or not subject or not message:
+            messages.error(request, "Recipient email, subject, and message are required.")
+            return redirect("student_management")
+
+        try:
+            send_mail(subject, message, settings.EMAIL_HOST_USER, [recipient_email], fail_silently=False)
+            messages.success(request, "Email sent successfully!")
+            return redirect("student_management")
+        except Exception as e:
+            messages.error(request, f"Error sending email: {str(e)}")
+            return redirect("student_management")
+
+    messages.error(request, "Invalid request.")
+    return redirect("student_management")
 
 
 def submit_student_profile(request, e_mail, college_id):
@@ -612,6 +656,89 @@ def submit_student_profile(request, e_mail, college_id):
         "faculties": faculties,
     }
     return render(request, "files/student_email.html", context)
+
+
+# Job listings/opportunities for a college management By cpc admin
+
+@login_required
+@role_required("cpc_admin")
+def job_listings_management(request):
+    cpc_profile = CPCProfile.objects.filter(user=request.user).first()
+    if not cpc_profile:
+        messages.error(request, "CPC profile not found. Please create one first.")
+        return redirect("cpc_dashboard")
+
+    jobs = JobDescription.objects.filter(colleges=cpc_profile.college).prefetch_related('custom_questions')
+    newest_job_id = jobs.order_by('-created_at').values_list('id', flat=True).first()
+    faculties = Faculty.objects.filter(cpc_profile=cpc_profile)
+
+    if request.method == "POST":
+        job_id = request.POST.get("job_id")
+        job = get_object_or_404(JobDescription, id=job_id)
+
+        faculty_id = request.POST.get("faculty")
+        graduation_year = request.POST.get("graduation_year")
+
+        students = StudentProfile.objects.filter(cpc_profile=cpc_profile, faculty_id=faculty_id, graduation_year=graduation_year)
+
+        if students.exists():
+            subject = f"New Job Opportunity: {job.job_title}"
+            from_email = request.user.email
+            
+            for student in students:
+                message = f"""
+                Dear {student.name},
+
+                We are excited to inform you about a new job opportunity that matches your profile.
+
+                Job Details:
+                Job Title: {job.job_title}
+                Description: {job.job_description}
+                Employment Type: {job.employment_type}
+                Application Deadline: {job.application_deadline}
+
+                For more details and to apply, please visit: [Link to Job Application]
+
+                Best regards,
+                Your Career Services Team
+                """
+                try:
+                    send_mail(
+                        subject,
+                        message,
+                        from_email,
+                        [student.email],
+                    )
+                    
+                except Exception as e:
+                    messages.error(request, f"Failed to send email to {student.email}: {e}")
+                    return redirect("job_listings_management")
+            
+            job.is_approved = True
+            job.save()
+            messages.success(request, f"Job '{job.job_title}' approved successfully and invitations sent to students.")
+        else:
+            messages.info(request, "No students found matching the criteria.")
+
+    q = request.GET.get("q", "").strip()
+    if q:
+        jobs = jobs.filter(
+            Q(job_title__icontains=q) |
+            Q(department__icontains=q) |
+            Q(employment_type__icontains=q)
+        )
+
+    paginator = Paginator(jobs.order_by('-created_at'), 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        "page_obj": page_obj,
+        "q": q,
+        "newest_job_id": newest_job_id,
+        "faculties": faculties,
+    }
+    return render(request, "files/job_listings_management.html", context)
 
 # Job Application Submission View
 def submit_job_application(request, job_id=None, email=None):

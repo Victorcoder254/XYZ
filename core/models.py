@@ -84,6 +84,8 @@ class JobDescription(models.Model):
         ('part_time', 'Part Time'),
         ('contract', 'Contract'),
         ('internship', 'Internship'),
+        ('hybrid', 'Hybrid'),
+        ('remote', 'Remote'),
     ]
 
     PAY_GRADE_CHOICES = [
@@ -107,6 +109,7 @@ class JobDescription(models.Model):
     job_title = models.CharField(max_length=255, blank=True, null=True)
     job_description = models.TextField(blank=True, null=True)
     required_qualifications = models.TextField(blank=True, null=True)
+    is_approved = models.BooleanField(default=False, blank=True, null=True)
     
     # Required fields
     employment_type = models.CharField(max_length=20, choices=EMPLOYMENT_TYPE_CHOICES, blank=True, null=True)
@@ -262,6 +265,8 @@ class CPCJobFilter(models.Model):
         ('part_time', 'Part Time'),
         ('contract', 'Contract'),
         ('internship', 'Internship'),
+        ('hybrid', 'Hybrid'),
+        ('remote', 'Remote'),
     ]
     allowed_employment_types = models.JSONField(
         blank=True,
