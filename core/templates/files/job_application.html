@@ -8,6 +8,7 @@
             <div class="card shadow">
                 <div class="card-header bg-white text-center py-4">
                     <h3 class="card-title mb-0">Apply for: {{ job.job_title }}</h3>
+                    <p class="text-muted mb-0">{{ job.company_name }}</p>
                 </div>
                 <div class="card-body p-4">
                     <p class="text-muted text-center mb-4">Applying as: {{ email }}</p>
@@ -23,31 +24,91 @@
                     <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
                         {% csrf_token %}
                         
+                        <!-- Required Documents -->
                         <div class="mb-4">
-                            <label for="resume" class="form-label fw-bold">Resume (PDF)</label>
-                            <input type="file" 
-                                   class="form-control border-2" 
-                                   id="resume" 
-                                   name="resume" 
-                                   accept=".pdf" 
-                                   required>
-                            <div class="form-text">Upload your resume in PDF format</div>
+                            <h5 class="mb-3 border-bottom pb-2">Required Documents</h5>
+                            
+                            <div class="mb-4">
+                                <label for="resume" class="form-label fw-bold">Resume (PDF)</label>
+                                <input type="file" 
+                                       class="form-control border-2" 
+                                       id="resume" 
+                                       name="resume" 
+                                       accept=".pdf" 
+                                       required>
+                                <div class="form-text">Upload your resume in PDF format</div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label for="cover_letter" class="form-label fw-bold">Cover Letter (PDF)</label>
+                                <input type="file" 
+                                       class="form-control border-2" 
+                                       id="cover_letter" 
+                                       name="cover_letter" 
+                                       accept=".pdf">
+                                <div class="form-text">Optional - Upload your cover letter in PDF format</div>
+                            </div>
                         </div>
 
+                        <!-- Custom Questions -->
+                        {% if custom_questions %}
                         <div class="mb-4">
-                            <label for="cover_letter" class="form-label fw-bold">Cover Letter (PDF)</label>
-                            <input type="file" 
-                                   class="form-control border-2" 
-                                   id="cover_letter" 
-                                   name="cover_letter" 
-                                   accept=".pdf" 
-                                   required>
-                            <div class="form-text">Upload your cover letter in PDF format</div>
+                            <h5 class="mb-3 border-bottom pb-2">Application Questions</h5>
+                            
+                            {% for question in custom_questions %}
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">
+                                    {{ question.question_text }}
+                                    {% if question.is_required %}<span class="text-danger">*</span>{% endif %}
+                                </label>
+                                
+                                {% if question.question_type == 'text' %}
+                                    <textarea name="question_{{ question.id }}" 
+                                              class="form-control"
+                                              rows="3"
+                                              {% if question.is_required %}required{% endif %}></textarea>
+                                
+                                {% elif question.question_type == 'multiple_choice' %}
+                                    <div class="form-check">
+                                        {% for option in question.options %}
+                                        <div class="form-check">
+                                            <input class="form-check-input" 
+                                                   type="radio" 
+                                                   name="question_{{ question.id }}" 
+                                                   value="{{ option }}"
+                                                   {% if question.is_required %}required{% endif %}>
+                                            <label class="form-check-label">{{ option }}</label>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                
+                                {% elif question.question_type == 'yes_no' %}
+                                    <select name="question_{{ question.id }}" 
+                                            class="form-select"
+                                            {% if question.is_required %}required{% endif %}>
+                                        <option value="">Select an option</option>
+                                        <option value="Yes">Yes</option>
+                                        <option value="No">No</option>
+                                    </select>
+                                
+                                {% elif question.question_type == 'file_upload' %}
+                                    <input type="file" 
+                                           name="question_{{ question.id }}" 
+                                           class="form-control"
+                                           accept=".pdf,.doc,.docx"
+                                           {% if question.is_required %}required{% endif %}>
+                                    <div class="form-text">
+                                        Accepted formats: PDF, Word documents
+                                    </div>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
                         </div>
+                        {% endif %}
 
                         <div class="d-grid gap-2 mt-5">
                             <button type="submit" class="btn btn-primary btn-lg">
-                                Submit Application
+                                <i class="fas fa-paper-plane me-2"></i>Submit Application
                             </button>
                         </div>
                     </form>
@@ -73,9 +134,18 @@
     .btn-primary {
         padding: 12px;
         border-radius: 8px;
+        transition: all 0.3s ease;
     }
-    .shadow {
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1) !important;
+    .btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+    .form-check {
+        padding-left: 1.5em;
+        margin-bottom: 0.5rem;
+    }
+    .border-bottom {
+        border-color: #dee2e6 !important;
     }
 </style>
 {% endblock %}

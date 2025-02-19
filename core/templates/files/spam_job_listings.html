@@ -1,0 +1,127 @@
+{% extends 'files/baseCPC.html' %}
+{% load static %}
+{% block title %}Spam Jobs{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="alert alert-warning mb-4">
+        <i class="fa fa-exclamation-triangle me-2"></i>
+        These jobs did not match your current CPC filters, Review your filters to acceopt some of these jobs.
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body px-0 pt-0 pb-2">
+
+            <!-- Jobs Table with Collapsible Details -->
+            <div class="table-responsive p-0">
+                <table class="table align-items-center mb-0">
+                    <thead>
+                        <tr>
+                            <th>Job Title</th>
+                            <th>Department</th>
+                            <th class="text-center">Employment Type</th>
+                            <th class="text-center">Posted Date</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for job in page_obj %}
+                        <tr>
+                            <td>
+                                <div class="d-flex px-2 py-1">
+                                    <div class="d-flex flex-column justify-content-center">
+                                        <h6 class="mb-0 text-sm">{{ job.job_title }}</h6>
+                                        <p class="text-xs text-secondary mb-0">{{ job.company_name }}</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ job.department }}</td>
+                            <td class="text-center">{{ job.get_employment_type_display }}</td>
+                            <td class="text-center">{{ job.created_at|date:"M d, Y" }}</td>
+                            <td class="align-middle">
+                                <button class="btn btn-sm btn-outline-primary" 
+                                        type="button" 
+                                        data-bs-toggle="collapse" 
+                                        data-bs-target="#details-{{ job.id }}" 
+                                        aria-expanded="false">
+                                    View More
+                                </button>
+                            </td>
+                        </tr>
+                        <!-- Collapsible Details Row -->
+                        <tr class="collapse" id="details-{{ job.id }}">
+                            <td colspan="5">
+                                <div class="row p-4">
+                                    <div class="col-md-6">
+                                        <p><strong>Company:</strong> {{ job.company_name }}</p>
+                                        <p><strong>Department:</strong> {{ job.department }}</p>
+                                        <p><strong>Employment Type:</strong> {{ job.get_employment_type_display }}</p>
+                                        <p><strong>Location:</strong> {{ job.location }}</p>
+                                        <p><strong>Salary Range:</strong> {{ job.minimum_pay }} - {{ job.maximum_pay }}</p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <p><strong>Requirements:</strong> {{ job.requirements }}</p>
+                                        <p><strong>Deadline:</strong> {{ job.application_deadline|date:"M d, Y" }}</p>
+                                        <div class="mt-3">
+                                            <h6>Custom Questions:</h6>
+                                            {% for question in job.custom_questions.all %}
+                                            <p class="mb-1">{{ question.question_text }}</p>
+                                            {% empty %}
+                                            <p class="text-muted">No custom questions</p>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center">No spam jobs found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <nav aria-label="Job listings pagination">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ q }}" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link" aria-hidden="true">&laquo;</span>
+            </li>
+            {% endif %}
+            
+            {% for i in page_obj.paginator.page_range %}
+            {% if page_obj.number == i %}
+            <li class="page-item active" aria-current="page">
+                <span class="page-link">{{ i }}</span>
+            </li>
+            {% else %}
+            <li class="page-item"><a class="page-link" href="?page={{ i }}&q={{ q }}">{{ i }}</a></li>
+            {% endif %}
+            {% endfor %}
+            
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ q }}" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link" aria-hidden="true">&raquo;</span>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endblock %}

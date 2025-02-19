@@ -220,7 +220,10 @@ class StudentProfile(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.name} - {self.course}"
+        # Handle potential null values
+        name = self.name or "Unnamed Student"
+        course = self.course or "No Course"
+        return f"{name} - {course}"
 
     class Meta:
         verbose_name = "Student Profile"
@@ -235,8 +238,12 @@ class JobApplication(models.Model):
     resume = models.FileField(upload_to='resumes/', blank=True, null=True)
     cover_letter = models.FileField(upload_to='cover_letters/', blank=True, null=True)
 
+
     def __str__(self):
-        return f"{self.student_profile.name} - {self.job.job_title}"
+        # Safely handle null relationships
+        student_name = self.student_profile.name if self.student_profile else "No Student"
+        job_title = self.job.job_title if self.job else "No Job"
+        return f"{student_name} - {job_title}"
 
         
 class QuestionResponse(models.Model):

@@ -14,5 +14,7 @@ urlpatterns = [
     path('edit_faculty/<int:faculty_id>/', edit_faculty, name='edit_faculty'),
     path('send_email/', send_email, name='send_email'),
     path('job_listings_management/', job_listings_management, name='job_listings_management'),
+    path('spam_jobs/', spam_job_listings, name='spam_job_listings'),
+    path('applications/', manage_job_applications, name='manage_applications'),
     # ... other URL patterns ...
 ]

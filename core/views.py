@@ -330,6 +330,15 @@ def cpc_dashboard(request):
     colleges = College.objects.all()
     cpc_job_filter = CPCJobFilter.objects.filter(cpc_profile=cpc_profile).first()
 
+    
+    # Initialize metrics
+    metrics = {
+        'students_count': 0,
+        'faculties_count': 0,
+        'applications_count': 0,
+        'spam_jobs_count': 0
+    }
+
     if request.method == "POST":
         form_type = request.POST.get("form_type")
 
@@ -401,6 +410,38 @@ def cpc_dashboard(request):
                 messages.success(request, "Job filter created successfully!")
 
             return redirect("cpc_dashboard")
+        
+        
+    if cpc_profile and cpc_profile.college:
+    # Get base querysets
+        students = StudentProfile.objects.filter(cpc_profile=cpc_profile)
+        faculties = Faculty.objects.filter(cpc_profile=cpc_profile)
+        applications = JobApplication.objects.filter(job__colleges=cpc_profile.college)
+        jobs = JobDescription.objects.filter(colleges=cpc_profile.college)
+
+    # Calculate spam jobs using existing logic
+    if cpc_job_filter:
+        valid_jobs = jobs
+        if cpc_job_filter.minimum_salary:
+            valid_jobs = valid_jobs.filter(minimum_pay__gte=cpc_job_filter.minimum_salary)
+        if cpc_job_filter.allowed_employment_types:
+            try:
+                allowed_types = json.loads(cpc_job_filter.allowed_employment_types)
+                valid_jobs = valid_jobs.filter(employment_type__in=allowed_types)
+            except (TypeError, json.JSONDecodeError):
+                pass
+        spam_jobs = jobs.exclude(id__in=valid_jobs.values_list('id', flat=True))
+    else:
+        spam_jobs = jobs.none()
+
+    # Update metrics
+    metrics.update({
+        'students_count': students.count(),
+        'faculties_count': faculties.count(),
+        'applications_count': applications.count(),
+        'spam_jobs_count': spam_jobs.count()
+    })
+
 
     context = {
         "cpc_profile": cpc_profile,
@@ -409,6 +450,7 @@ def cpc_dashboard(request):
         "cpc_job_filter": cpc_job_filter,
         "employment_type_choices": CPCJobFilter.EMPLOYMENT_TYPE_CHOICES,
         "job_category_choices": CPCJobFilter.JOB_CATEGORY_CHOICES,
+        **metrics
     }
     return render(request, "files/cpc_dashboard.html", context)
 
@@ -684,39 +726,80 @@ def job_listings_management(request):
         if students.exists():
             subject = f"New Job Opportunity: {job.job_title}"
             from_email = request.user.email
-            
+            success_count = 0
+            errors = []
+
             for student in students:
-                message = f"""
-                Dear {student.name},
-
-                We are excited to inform you about a new job opportunity that matches your profile.
-
-                Job Details:
-                Job Title: {job.job_title}
-                Description: {job.job_description}
-                Employment Type: {job.employment_type}
-                Application Deadline: {job.application_deadline}
-
-                For more details and to apply, please visit: [Link to Job Application]
-
-                Best regards,
-                Your Career Services Team
-                """
                 try:
+                    # Generate application URL
+                    application_url = request.build_absolute_uri(
+                        reverse('submit_job_application', kwargs={
+                            'job_id': job.id,
+                            'email': student.email
+                        })
+                    )
+
+                    # Build email message
+                    message = f"""
+                    Dear {student.name},
+
+                    We're excited to share a job opportunity that matches your profile:
+
+                    Position: {job.job_title}
+                    Company: {job.business.business_name}
+                    Location: {job.work_location}
+                    Employment Type: {job.employment_type}
+                    Salary Range: ${job.minimum_pay:,.2f} - ${job.maximum_pay:,.2f}
+                    Application Deadline: {job.application_deadline.strftime('%B %d, %Y')}
+
+                    Key Responsibilities:
+                    {job.job_description}
+
+                    Skills Required:
+                    {job.skills_required}
+
+                    To apply, please visit:
+                    {application_url}
+
+                    Application Requirements:
+                    - Updated Resume (required)
+                    - Cover Letter (optional)
+                    - Complete all required questions in the application form
+
+                    Custom Application Questions:
+                    {'\n'.join([f'• {q.question_text}' for q in job.custom_questions.all() if q.is_required])}
+
+                    Please submit your application at least 3 days before the deadline.
+
+                    Best regards,
+                    {request.user.get_full_name()}
+                    {cpc_profile.college.name} Career Services
+                    """
+
                     send_mail(
                         subject,
-                        message,
+                        message.strip(),  # Remove leading whitespace
                         from_email,
                         [student.email],
+                        fail_silently=False
                     )
-                    
+                    success_count += 1
+
                 except Exception as e:
-                    messages.error(request, f"Failed to send email to {student.email}: {e}")
-                    return redirect("job_listings_management")
-            
-            job.is_approved = True
-            job.save()
-            messages.success(request, f"Job '{job.job_title}' approved successfully and invitations sent to students.")
+                    errors.append(f"{student.email}: {str(e)}")
+
+            if success_count > 0:
+                job.is_approved = True
+                job.save()
+                messages.success(request, 
+                    f"Sent {success_count} invitations for '{job.job_title}'. "
+                    f"{len(errors)} failed deliveries."
+                )
+
+            if errors:
+                messages.error(request, "Failed to send to: " + ", ".join(errors))
+                print(errors)
+
         else:
             messages.info(request, "No students found matching the criteria.")
 
@@ -732,6 +815,7 @@ def job_listings_management(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
+
     context = {
         "page_obj": page_obj,
         "q": q,
@@ -740,27 +824,113 @@ def job_listings_management(request):
     }
     return render(request, "files/job_listings_management.html", context)
 
-# Job Application Submission View
+
+@login_required
+@role_required("cpc_admin")
+def spam_job_listings(request):
+    cpc_profile = CPCProfile.objects.filter(user=request.user).first()
+    if not cpc_profile:
+        messages.error(request, "CPC profile not found. Please create one first.")
+        return redirect("cpc_dashboard")
+
+    cpc_job_filter = CPCJobFilter.objects.filter(cpc_profile=cpc_profile).first()
+    
+    # Get all jobs for the college
+    spam_jobs = JobDescription.objects.filter(colleges=cpc_profile.college)
+    
+    # Exclude jobs that match CPC filters
+    if cpc_job_filter:
+        valid_jobs = JobDescription.objects.filter(colleges=cpc_profile.college)
+        
+        if cpc_job_filter.minimum_salary:
+            valid_jobs = valid_jobs.filter(minimum_pay__gte=cpc_job_filter.minimum_salary)
+        
+        if cpc_job_filter.allowed_employment_types:
+            try:
+                allowed_employment_types = json.loads(cpc_job_filter.allowed_employment_types)
+                valid_jobs = valid_jobs.filter(
+                    employment_type__in=[et.lower().replace(" ", "") for et in allowed_employment_types]
+                )
+            except (TypeError, json.JSONDecodeError):
+                pass
+        
+        if cpc_job_filter.allowed_job_categories:
+            try:
+                allowed_job_categories = json.loads(cpc_job_filter.allowed_job_categories)
+                valid_jobs = valid_jobs.filter(
+                    job_category__in=[jc.lower().replace(" ", "") for jc in allowed_job_categories]
+                )
+            except (TypeError, json.JSONDecodeError):
+                pass
+        
+        # Get spam jobs by excluding valid ones
+        spam_jobs = spam_jobs.exclude(id__in=valid_jobs.values_list('id', flat=True))
+
+    q = request.GET.get("q", "").strip()
+    if q:
+        spam_jobs = spam_jobs.filter(
+            Q(job_title__icontains=q) |
+            Q(department__icontains=q) |
+            Q(employment_type__icontains=q)
+        )
+
+    paginator = Paginator(spam_jobs.order_by('-created_at'), 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        "page_obj": page_obj,
+        "q": q,
+    }
+    return render(request, "files/spam_job_listings.html", context)
+
+from django.core.exceptions import ValidationError
+
 def submit_job_application(request, job_id=None, email=None):
-    # Get the job and validate student profile
     job = get_object_or_404(JobDescription, id=job_id)
     student_profile = get_object_or_404(StudentProfile, email=email)
     
     if request.method == "POST":
         cover_letter = request.FILES.get("cover_letter")
         resume = request.FILES.get("resume")
+        custom_questions = CustomQuestion.objects.filter(job=job).order_by('order')
 
         # Validate required fields
+        errors = []
         if not resume:
-            messages.error(request, "Please upload your resume.")
+            errors.append("Resume is required")
+            
+        # Validate custom questions
+        question_responses = {}
+        for question in custom_questions:
+            key = f'question_{question.id}'
+            
+            if question.question_type == 'file_upload':
+                response = request.FILES.get(key)
+            else:
+                response = request.POST.get(key)
+            
+            if question.is_required and not response:
+                errors.append(f"Required question missing: {question.question_text}")
+            elif response:
+                question_responses[question.id] = {
+                    'question': question,
+                    'response': response,
+                    'is_file': question.question_type == 'file_upload'
+                }
+
+        if errors:
+            for error in errors:
+                messages.error(request, error)
             return render(request, "files/job_application.html", {
                 "job": job,
                 "student_profile": student_profile,
+                "custom_questions": custom_questions,
                 "email": email
             })
 
         try:
-            # Create job application record
+            # Create job application
             application = JobApplication.objects.create(
                 job=job,
                 student_profile=student_profile,
@@ -768,36 +938,38 @@ def submit_job_application(request, job_id=None, email=None):
                 cover_letter=cover_letter
             )
 
-            # Handle custom questions if any
-            for key, value in request.POST.items():
-                if key.startswith('question_'):
-                    question_id = key.split('_')[1]
-                    question = get_object_or_404(CustomQuestion, id=question_id)
+            # Save question responses
+            for qid, response_data in question_responses.items():
+                question = response_data['question']
+                response_value = response_data['response']
+                
+                if response_data['is_file']:
+                    QuestionResponse.objects.create(
+                        job_application=application,
+                        question=question,
+                        file_response=response_value
+                    )
+                else:
+                    # Handle multiple choice options
+                    if question.question_type == 'multiple_choice' and question.options:
+                        options = json.loads(question.options)
+                        if response_value not in options:
+                            raise ValidationError("Invalid choice for question")
                     
-                    # Handle file upload questions separately
-                    if question.question_type == 'file_upload':
-                        file_response = request.FILES.get(key)
-                        if file_response:
-                            QuestionResponse.objects.create(
-                                job_application=application,
-                                question=question,
-                                file_response=file_response
-                            )
-                    else:
-                        QuestionResponse.objects.create(
-                            job_application=application,
-                            question=question,
-                            response=value
-                        )
+                    QuestionResponse.objects.create(
+                        job_application=application,
+                        question=question,
+                        response=response_value
+                    )
 
-            messages.success(request, "Job application submitted successfully!")
+            messages.success(request, "Application submitted successfully!")
             return redirect("success_page")
             
         except Exception as e:
             messages.error(request, f"Error submitting application: {str(e)}")
             return redirect("job_application", job_id=job_id, email=email)
     
-    # Get custom questions for this job
+    # GET request handling remains the same
     custom_questions = CustomQuestion.objects.filter(job=job).order_by('order')
     
     context = {
@@ -811,3 +983,51 @@ def submit_job_application(request, job_id=None, email=None):
 # Success Page View
 def success_page(request):
     return render(request, "files/success.html")
+
+
+@login_required
+@role_required("cpc_admin")
+def manage_job_applications(request):
+    cpc_profile = CPCProfile.objects.filter(user=request.user).first()
+    if not cpc_profile:
+        messages.error(request, "CPC profile not found.")
+        return redirect("cpc_dashboard")
+
+    applications = JobApplication.objects.filter(
+        job__colleges=cpc_profile.college
+    ).select_related('job', 'student_profile').prefetch_related('question_responses')
+
+    # Filters
+    job_id = request.GET.get('job_id')
+    status = request.GET.get('status')
+    student_email = request.GET.get('student_email')
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+
+    if job_id:
+        applications = applications.filter(job__id=job_id)
+    if status:
+        applications = applications.filter(status=status)
+    if student_email:
+        applications = applications.filter(student_profile__email__icontains=student_email)
+    if date_from and date_to:
+        applications = applications.filter(submitted_at__date__range=[date_from, date_to])
+
+    # Pagination
+    paginator = Paginator(applications.order_by('-submitted_at'), 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'page_obj': page_obj,
+        'total_applications': applications.count(),
+        'jobs': JobDescription.objects.filter(colleges=cpc_profile.college),
+        'filter_params': {
+            'job_id': job_id,
+            'status': status,
+            'student_email': student_email,
+            'date_from': date_from,
+            'date_to': date_to
+        }
+    }
+    return render(request, 'files/manage_applications.html', context)

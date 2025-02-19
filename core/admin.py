@@ -68,3 +68,8 @@ class FacultyAdmin(admin.ModelAdmin):
 
 admin.site.register(Faculty, FacultyAdmin)
 
+class JobApplicationAdmin(admin.ModelAdmin):
+    list_display = ("submitted_at", "student_profile", "job")
+
+
+admin.site.register(JobApplication, JobApplicationAdmin)

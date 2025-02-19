@@ -119,62 +119,71 @@
                   </div>
                   </div>
             </div>
-              <div class="table-responsive p-0">
-                  <table class="table align-items-center mb-0">
-                      <thead>
-                          <tr>
-                              <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Name</th>
-                              <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Faculty</th>
-                              <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Course</th>
-                              <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Academic Year</th>
-                              <th class="text-secondary opacity-7"></th>
-                          </tr>
-                      </thead>
-                      <tbody>
-                          {% for student in page_obj %}
-                          <tr>
-                              <td>
-                                  <div class="d-flex px-2 py-1">
-                                      <div class="d-flex flex-column justify-content-center">
-                                          <h6 class="mb-0 text-sm">{{ student.name }}</h6>
-                                          <p class="text-xs text-secondary mb-0">{{ student.email }}</p>
-                                      </div>
-                                  </div>
-                              </td>
-                              <td>
-                                  <p class="text-xs font-weight-bold mb-0">{{ student.faculty.name }}</p>
-                              </td>
-                              <td class="align-middle text-center">
-                                  <span class="text-secondary text-xs font-weight-bold">{{ student.course }}</span>
-                              </td>
-                              <td class="align-middle text-center">
-                                  <span class="text-secondary text-xs font-weight-bold">{{ student.academic_year }}</span>
-                              </td>
-                              <td class="align-middle">
-                                  <button type="button" class="btn btn-sm btn-outline-primary show-more-btn"
-                                      data-student-id="{{ student.id }}"
-                                      data-name="{{ student.name }}"
-                                      data-email="{{ student.email }}"
-                                      data-faculty="{{ student.faculty.name }}"
-                                      data-course="{{ student.course }}"
-                                      data-academic-year="{{ student.academic_year }}"
-                                      data-phone="{{ student.phone_number }}"
-                                      data-education-level="{{ student.education_level }}"
-                                      data-graduation-year="{{ student.graduation_year }}"
-                                      data-skills="{{ student.skills }}"
-                                      data-bio="{{ student.bio }}">
-                                      Show More
-                                  </button>
-                              </td>
-                          </tr>
-                          {% empty %}
-                          <tr>
-                              <td colspan="5" class="text-center">No student profiles found.</td>
-                          </tr>
-                          {% endfor %}
-                      </tbody>
-                  </table>
-              </div>
+            
+            <!-- Student Table with Collapsible Details -->
+            <div class="table-responsive p-0">
+                <table class="table align-items-center mb-0">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Faculty</th>
+                            <th class="text-center">Course</th>
+                            <th class="text-center">Academic Year</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student in page_obj %}
+                        <tr>
+                            <td>
+                                <div class="d-flex px-2 py-1">
+                                    <div class="d-flex flex-column justify-content-center">
+                                        <h6 class="mb-0 text-sm">{{ student.name }}</h6>
+                                        <p class="text-xs text-secondary mb-0">{{ student.email }}</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ student.faculty.name }}</td>
+                            <td class="text-center">{{ student.course }}</td>
+                            <td class="text-center">{{ student.academic_year }}</td>
+                            <td class="align-middle">
+                                <button class="btn btn-sm btn-outline-primary" 
+                                        type="button" 
+                                        data-bs-toggle="collapse" 
+                                        data-bs-target="#details-{{ student.id }}" 
+                                        aria-expanded="false">
+                                    View More
+                                </button>
+                            </td>
+                        </tr>
+                        <!-- Collapsible Details Row -->
+                        <tr class="collapse" id="details-{{ student.id }}">
+                            <td colspan="5">
+                                <div class="row p-4">
+                                    <div class="col-md-6">
+                                        <p><strong>Name:</strong> {{ student.name }}</p>
+                                        <p><strong>Email:</strong> {{ student.email }}</p>
+                                        <p><strong>Faculty:</strong> {{ student.faculty.name }}</p>
+                                        <p><strong>Course:</strong> {{ student.course }}</p>
+                                        <p><strong>Academic Year:</strong> {{ student.academic_year }}</p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <p><strong>Phone:</strong> {{ student.phone_number }}</p>
+                                        <p><strong>Education Level:</strong> {{ student.education_level }}</p>
+                                        <p><strong>Graduation Year:</strong> {{ student.graduation_year }}</p>
+                                        <p><strong>Skills:</strong> {{ student.skills }}</p>
+                                        <p><strong>Bio:</strong> {{ student.bio }}</p>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center">No student profiles found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
           </div>
       </div>
       <!-- Pagination -->
@@ -215,67 +224,6 @@
       {% endif %}
       </ul>
       </nav>
-  </div>
-  <!-- Student Details Container (Initially Hidden) -->
-<div id="studentDetailsContainer" class="container-fluid p-4" style="display: none;">
-      <div class="card shadow-lg">
-          <div class="card-header bg-gradient-primary text-white">
-              <h5 class="card-title mb-0"><span id="studentName"></span>'s Details</h5>
-          </div>
-          <div class="card-body">
-              <div class="row">
-                  <!-- Left Column -->
-                  <div class="col-md-6">
-                      <div class="mb-3">
-                          <p class="mb-1"><strong>Name:</strong></p>
-                          <p class="text-muted" id="studentNameDetail"></p>
-                      </div>
-                      <div class="mb-3">
-                          <p class="mb-1"><strong>Email:</strong></p>
-                          <p class="text-muted" id="studentEmail"></p>
-                      </div>
-                      <div class="mb-3">
-                          <p class="mb-1"><strong>Faculty:</strong></p>
-                          <p class="text-muted" id="studentFaculty"></p>
-                      </div>
-                      <div class="mb-3">
-                          <p class="mb-1"><strong>Course:</strong></p>
-                          <p class="text-muted" id="studentCourse"></p>
-                      </div>
-                      <div class="mb-3">
-                          <p class="mb-1"><strong>Academic Year:</strong></p>
-                          <p class="text-muted" id="studentAcademicYear"></p>
-                      </div>
-                  </div>
-                  <!-- Right Column -->
-                  <div class="col-md-6">
-                      <div class="mb-3">
-                          <p class="mb-1"><strong>Phone:</strong></p>
-                          <p class="text-muted" id="studentPhone"></p>
-                      </div>
-                      <div class="mb-3">
-                          <p class="mb-1"><strong>Education Level:</strong></p>
-                          <p class="text-muted" id="studentEducationLevel"></p>
-                      </div>
-                      <div class="mb-3">
-                          <p class="mb-1"><strong>Graduation Year:</strong></p>
-                          <p class="text-muted" id="studentGraduationYear"></p>
-                      </div>
-                      <div class="mb-3">
-                          <p class="mb-1"><strong>Skills:</strong></p>
-                          <p class="text-muted" id="studentSkills"></p>
-                      </div>
-                      <div class="mb-3">
-                          <p class="mb-1"><strong>Bio:</strong></p>
-                          <p class="text-muted" id="studentBio"></p>
-                      </div>
-                  </div>
-              </div>
-          </div>
-          <div class="card-footer bg-light text-end">
-              <button type="button" class="btn btn-secondary" id="closeDetails">Close</button>
-          </div>
-      </div>
   </div>
   <!-- Create Faculty Modal -->
 <div class="modal fade" id="createFacultyModal" tabindex="-1" aria-labelledby="createFacultyModalLabel" aria-hidden="true">
@@ -511,38 +459,6 @@ document.addEventListener("DOMContentLoaded", function() {
     searchInput.addEventListener("input", checkSearchFilters);
     facultyFilter.addEventListener("change", checkSearchFilters);
 });
-      document.addEventListener("DOMContentLoaded", function() {
-          const studentTable = document.getElementById("studentTable");
-          const studentDetailsContainer = document.getElementById("studentDetailsContainer");
-          const closeDetails = document.getElementById("closeDetails");
-      
-          document.querySelectorAll(".show-more-btn").forEach(button => {
-              button.addEventListener("click", function() {
-                  // Hide table and show student details
-                  studentTable.style.display = "none";
-                  studentDetailsContainer.style.display = "block";
-      
-                  // Populate student details
-                  document.getElementById("studentName").innerText = this.getAttribute("data-name");
-                  document.getElementById("studentNameDetail").innerText = this.getAttribute("data-name");
-                  document.getElementById("studentEmail").innerText = this.getAttribute("data-email");
-                  document.getElementById("studentFaculty").innerText = this.getAttribute("data-faculty");
-                  document.getElementById("studentCourse").innerText = this.getAttribute("data-course");
-                  document.getElementById("studentAcademicYear").innerText = this.getAttribute("data-academic-year");
-                  document.getElementById("studentPhone").innerText = this.getAttribute("data-phone");
-                  document.getElementById("studentEducationLevel").innerText = this.getAttribute("data-education-level");
-                  document.getElementById("studentGraduationYear").innerText = this.getAttribute("data-graduation-year");
-                  document.getElementById("studentSkills").innerText = this.getAttribute("data-skills");
-                  document.getElementById("studentBio").innerText = this.getAttribute("data-bio");
-              });
-          });
-      
-          closeDetails.addEventListener("click", function() {
-              // Show table and hide student details
-              studentTable.style.display = "block";
-              studentDetailsContainer.style.display = "none";
-          });
-      });
       </script>
       
 {% endblock %}
