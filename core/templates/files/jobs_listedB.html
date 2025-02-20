@@ -1,0 +1,211 @@
+{% extends 'files/baseBus.html' %}
+{% load static %}
+{% block title %}Manage Jobs{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div id="jobTable">
+        <div class="card mb-4">
+            <div class="card-body px-0 pt-0 pb-2">
+                <!-- Wrapped Search Form -->
+                <div class="container pt-3">
+                    <div class="row">
+                        <div class="col-12">
+                            <form method="get" class="mb-3">
+                                <div class="d-flex flex-column flex-md-row gap-2">
+                                    <div class="flex-grow-1">
+                                        <input type="text" name="q" class="form-control" placeholder="Search by job title, department, or employment type" value="{{ q }}">
+                                    </div>
+                                    <div>
+                                        <button type="submit" class="btn btn-primary w-100">Search</button>
+                                    </div>
+                                    <div>
+                                        <a href="{% url 'job_listings_management' %}" class="btn btn-secondary w-100" style="display: none;">Clear</a>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-responsive p-0">
+                    <table class="table align-items-center mb-0">
+                        <thead>
+                            <tr>
+                                <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Job Title</th>
+                                <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Department</th>
+                                <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Employment Type</th>
+                                <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Created At</th>
+                                <th class="text-secondary opacity-7"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for job in page_obj %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex px-2 py-1 align-items-center">
+                                        <div class="d-flex flex-column justify-content-center">
+                                            <h6 class="mb-0 text-sm">
+                                                {{ job.job_title }}
+                                                {% if job.id == newest_job_id %}
+                                                <span class="badge bg-gradient-success ms-2">New</span>
+                                                {% endif %}
+                                            </h6>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <p class="text-xs font-weight-bold mb-0">{{ job.department }}</p>
+                                </td>
+                                <td class="align-middle text-center">
+                                    <span class="text-secondary text-xs font-weight-bold">{{ job.employment_type }}</span>
+                                </td>
+                                <td class="align-middle text-center">
+                                    <span class="text-secondary text-xs font-weight-bold">{{ job.created_at|date:"Y-m-d H:i:s" }}</span>
+                                </td>
+                                <td class="align-middle">
+                                    <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#jobDetails{{ job.id }}" aria-expanded="false" aria-controls="jobDetails{{ job.id }}">
+                                        View Details
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colspan="5">
+                                    <div class="collapse" id="jobDetails{{ job.id }}">
+                                        <div class="card card-body">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <p class="mb-1"><strong>Job Title:</strong></p>
+                                                        <p class="text-muted">{{ job.job_title }}</p>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <p class="mb-1"><strong>Department:</strong></p>
+                                                        <p class="text-muted">{{ job.department }}</p>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <p class="mb-1"><strong>Employment Type:</strong></p>
+                                                        <p class="text-muted">{{ job.employment_type }}</p>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <p class="mb-1"><strong>Location:</strong></p>
+                                                        <p class="text-muted">{{ job.work_location }}</p>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <p class="mb-1"><strong>Description:</strong></p>
+                                                        <p class="text-muted">{{ job.job_description }}</p>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <p class="mb-1"><strong>Requirements:</strong></p>
+                                                        <p class="text-muted">{{ job.required_qualifications }}</p>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <p class="mb-1"><strong>Salary:</strong></p>
+                                                        <p class="text-muted">{{ job.minimum_pay }} - {{ job.maximum_pay }}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <!-- Custom Questions -->
+                                            <div id="customQuestionsSection">
+                                                <h5>Custom Questions:</h5>
+                                                <div id="customQuestionsList">
+                                                    {% for question in job.custom_questions.all %}
+                                                    <div class="mb-3 p-3 border-bottom">
+                                                        <p class="mb-2 fw-bold">Q{{ forloop.counter }}: {{ question.question_text }}</p>
+                                                        <p class="text-muted mb-1 small">Type: {{ question.question_type }}</p>
+                                                        <p class="text-muted mb-1 small">Required: {% if question.is_required %}Yes{% else %}No{% endif %}</p>
+                                                        {% if question.question_type == 'multiple_choice' and question.options %}
+                                                        <div class="mt-2">
+                                                            <p class="mb-1 small fw-bold">Options:</p>
+                                                            <ul class="list-unstyled ps-3">
+                                                                {% for option in question.options %}
+                                                                <li class="small">• {{ option }}</li>
+                                                                {% endfor %}
+                                                            </ul>
+                                                        </div>
+                                                        {% endif %}
+                                                    </div>
+                                                    {% empty %}
+                                                    <p class="text-muted">No custom questions for this job.</p>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center">No job listings found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <!-- Pagination -->
+        <nav aria-label="Job listings pagination">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ q }}" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link" aria-hidden="true">&laquo;</span>
+                </li>
+                {% endif %}
+
+                {% for i in page_obj.paginator.page_range %}
+                {% if page_obj.number == i %}
+                <li class="page-item active" aria-current="page">
+                    <span class="page-link">{{ i }}</span>
+                </li>
+                {% else %}
+                <li class="page-item"><a class="page-link" href="?page={{ i }}&q={{ q }}">{{ i }}</a></li>
+                {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ q }}" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link" aria-hidden="true">&raquo;</span>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const searchInput = document.querySelector("input[name='q']");
+        const clearButton = document.querySelector("a.btn-secondary");
+
+        // Function to check if search filters are applied
+        function checkSearchFilters() {
+            const hasSearchText = searchInput.value.trim() !== "";
+            if (hasSearchText) {
+                clearButton.style.display = "block"; // Show the Clear button
+            } else {
+                clearButton.style.display = "none"; // Hide the Clear button
+            }
+        }
+
+        // Initial check
+        checkSearchFilters();
+
+        // Event listeners for input changes
+        searchInput.addEventListener("input", checkSearchFilters);
+    });
+</script>
+{% endblock %}

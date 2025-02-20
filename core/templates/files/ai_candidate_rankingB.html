@@ -1,0 +1,60 @@
+{% extends 'files/baseBus.html' %}
+{% load static %}
+{% block title %}AI Candidate Ranking{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <h2 class="mb-4">AI Candidate Ranking</h2>
+
+    
+   <!-- Job Selection Form -->
+<form method="post" class="mb-4">
+      {% csrf_token %}
+      <div class="row g-3">
+          <div class="col-md-6">
+              <label for="job_id" class="form-label">Select Job:</label>
+              <select name="job_id" id="job_id" class="form-select">
+                  <option value="">-- Select a Job --</option>
+                  {% for job in jobs %}
+                      <option value="{{ job.id }}">{{ job.job_title }}</option>  <!-- Correct field name -->
+                  {% endfor %}
+              </select>
+          </div>
+          <div class="col-md-6 d-flex align-items-end">
+              <button type="submit" name="rank_candidates" class="btn btn-primary">Rank Candidates</button>
+          </div>
+      </div>
+  </form>
+
+    <!-- Ranked Candidates -->
+    {% if ranked_candidates %}
+        <h3 class="mt-4">AI Ranked Candidates</h3>
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Rank</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Score</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for candidate in ranked_candidates %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ candidate.name }}</td>
+                            <td>{{ candidate.email }}</td>
+                            <td>{{ candidate.score }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center">No candidates ranked.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

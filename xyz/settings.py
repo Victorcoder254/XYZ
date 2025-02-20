@@ -4,7 +4,7 @@ import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "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")
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 

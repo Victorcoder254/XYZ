@@ -16,5 +16,8 @@ urlpatterns = [
     path('job_listings_management/', job_listings_management, name='job_listings_management'),
     path('spam_jobs/', spam_job_listings, name='spam_job_listings'),
     path('applications/', manage_job_applications, name='manage_applications'),
+    path("my-jobs/", business_jobs_list, name="business-job-list"),
+    path('manage_applications/', job_applications, name='job_applications'),
+    path('ai-candidate-ranking/', ai_candidate_ranking, name='ai_candidate_ranking'),
     # ... other URL patterns ...
 ]

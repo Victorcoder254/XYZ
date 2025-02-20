@@ -20,6 +20,7 @@ import openpyxl
 from django.db import IntegrityError
 from django.core.paginator import Paginator
 from django.db.models import Q
+from .utils import rank_candidates
 
 
 def home_view(request):
@@ -91,6 +92,8 @@ def business_dashboard(request):
         profile_complete = True
         business = request.user.business_profile
         jobs = JobDescription.objects.filter(business=business)
+
+        applications = JobApplication.objects.filter(job__in=jobs)
 
     if request.method == "POST":
         form_type = request.POST.get("form_type")
@@ -269,6 +272,7 @@ def business_dashboard(request):
         "profile_complete": profile_complete,
         "jobs": jobs,
         "colleges": colleges,
+        "applications": applications,  # Pass applications to template
         "employment_types": JobDescription.EMPLOYMENT_TYPE_CHOICES,
         "job_categories": JobDescription.JOB_CATEGORY_CHOICES,
         "pay_grades": JobDescription.PAY_GRADE_CHOICES,
@@ -277,6 +281,161 @@ def business_dashboard(request):
     }
 
     return render(request, "files/business_dashboard.html", context)
+
+
+@login_required
+@role_required("business_admin")
+def business_jobs_list(request):
+    business_profile = request.user.business_profile  # Ensure this is correctly linked
+    if not business_profile:
+        messages.error(request, "Business profile not found. Please create one first.")
+        return redirect("business_dashboard")  # Redirect user to create profile
+
+    jobs = JobDescription.objects.filter(business=business_profile)
+
+    # Search functionality
+    q = request.GET.get("q", "").strip()
+    if q:
+        jobs = jobs.filter(
+            Q(job_title__icontains=q) |
+            Q(department__icontains=q) |
+            Q(employment_type__icontains=q)
+        )
+
+    # Pagination
+    paginator = Paginator(jobs.order_by('-created_at'), 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        "page_obj": page_obj,
+        "q": q,
+    }
+
+    return render(request, "files/jobs_listedB.html", context)
+
+
+@login_required
+@role_required("business_admin")
+def job_applications(request):
+    business_profile = request.user.business_profile
+    if not business_profile:
+        messages.error(request, "Business profile not found. Please create one first.")
+        return redirect("business_dashboard")
+
+    applications = JobApplication.objects.filter(job__business=business_profile).select_related('job', 'student_profile').prefetch_related('question_responses')
+
+
+    # Filters
+    job_id = request.GET.get('job_id')
+    status = request.GET.get('status')
+    student_email = request.GET.get('student_email')
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+
+    if job_id:
+        applications = applications.filter(job__id=job_id)
+    if status:
+        applications = applications.filter(status=status)
+    if student_email:
+        applications = applications.filter(student_profile__email__icontains=student_email)
+    if date_from and date_to:
+        applications = applications.filter(submitted_at__date__range=[date_from, date_to])
+
+    # Pagination
+    paginator = Paginator(applications.order_by('-submitted_at'), 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'page_obj': page_obj,
+        'total_applications': applications.count(),
+        'jobs': JobDescription.objects.filter(business=business_profile),
+        'filter_params': {
+            'job_id': job_id,
+            'status': status,
+            'student_email': student_email,
+            'date_from': date_from,
+            'date_to': date_to
+        }
+    }
+    return render(request, "files/job_applicationsB.html", context)
+
+
+
+@login_required
+@role_required("business_admin")
+def ai_candidate_ranking(request):
+    # Fetch the business profile for the logged-in user
+    business_profile = request.user.business_profile
+    if not business_profile:
+        messages.error(request, "Business profile not found. Please create one first.")
+        return redirect("business_dashboard")
+
+    # Fetch all jobs under this business
+    jobs = JobDescription.objects.filter(business=business_profile)
+
+    # Fetch all job applications for jobs under this business
+    applications = JobApplication.objects.filter(job__business=business_profile).select_related('job', 'student_profile')
+
+    # Filters
+    job_id = request.POST.get("job_id")
+    status = request.POST.get("status")
+    student_email = request.POST.get("student_email")
+    date_from = request.POST.get("date_from")
+    date_to = request.POST.get("date_to")
+
+    # Apply filters
+    if job_id:
+        applications = applications.filter(job__id=job_id)
+    if status:
+        applications = applications.filter(status=status)
+    if student_email:
+        applications = applications.filter(student_profile__email__icontains=student_email)
+    if date_from and date_to:
+        applications = applications.filter(submitted_at__date__range=[date_from, date_to])
+
+    # AI Ranking
+    ranked_candidates = []
+    if job_id and "rank_candidates" in request.POST:
+        job = JobDescription.objects.get(id=job_id)
+        job_description = job.job_description  # Use the correct field name
+        candidates = [
+        {
+            "name": app.student_profile.name,
+            "email": app.student_profile.email,
+            "skills": app.student_profile.skills,
+            "education_level": app.student_profile.education_level,
+            "academic_year": app.student_profile.academic_year,
+            "course": app.student_profile.course,
+            "graduation_year": app.student_profile.graduation_year,
+            "bio": app.student_profile.bio,
+        }
+        for app in applications if app.student_profile  # Ensure student_profile exists
+    ]
+        ranked_candidates = rank_candidates(job_description, candidates)
+
+    # Pagination
+    paginator = Paginator(applications.order_by('-submitted_at'), 10)
+    page_number = request.POST.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    # Context
+    context = {
+        'page_obj': page_obj,
+        'total_applications': applications.count(),
+        'jobs': jobs,
+        'filter_params': {
+            'job_id': job_id,
+            'status': status,
+            'student_email': student_email,
+            'date_from': date_from,
+            'date_to': date_to
+        },
+        'ranked_candidates': ranked_candidates
+    }
+
+    return render(request, "files/ai_candidate_rankingB.html", context)
 
 
 

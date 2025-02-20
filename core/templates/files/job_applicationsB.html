@@ -1,4 +1,4 @@
-{% extends 'files/baseCPC.html' %}
+{% extends 'files/baseBus.html' %}
 {% load static %}
 {% block title %}Manage Job Applications{% endblock %}
 
@@ -57,6 +57,25 @@
                         <tr class="collapse" id="details-{{ application.id }}">
                             <td colspan="5">
                                 <div class="p-4 bg-light">
+                                    <div class="row bg-primary text-white p-4 rounded mb-4">
+                                          <div class="col-md-6">
+                                              <h6 class="mb-3 fw-bold text-uppercase">Student Profile</h6>
+                                              <p><strong>Name:</strong> {{ application.student_profile.name }}</p>
+                                              <p><strong>Email:</strong> {{ application.student_profile.email }}</p>
+                                              <p><strong>Faculty:</strong> {{ application.student_profile.faculty.name }}</p>
+                                              <p><strong>Course:</strong> {{ application.student_profile.course }}</p>
+                                              <p><strong>Academic Year:</strong> {{ application.student_profile.academic_year }}</p>
+                                              <p><strong>Phone:</strong> {{ application.student_profile.phone_number }}</p>
+                                          </div>
+                                          <div class="col-md-6">
+                                              <p><strong>Education Level:</strong> {{ application.student_profile.education_level }}</p>
+                                              <p><strong>Graduation Year:</strong> {{ application.student_profile.graduation_year }}</p>
+                                              <p><strong>Skills:</strong> {{ application.student_profile.skills }}</p>
+                                              <p><strong>Bio:</strong></p>
+                                              <p class="fst-italic">{{ application.student_profile.bio }}</p>
+                                          </div>
+                                      </div>
+                                      
                                     <!-- Application Documents -->
                                     <div class="row mb-4">
                                         <div class="col-md-6">
@@ -118,7 +137,6 @@
             </div>
 
             <!-- Pagination remains the same -->
-             
         </div>
     </div>
     
