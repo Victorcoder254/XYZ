@@ -1,13 +1,13 @@
 from pathlib import Path
 import os
+from dotenv import load_dotenv
+
+load_dotenv()  # Load environment variables
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # Load API key securely
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "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")
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
-
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-b4jtzoa**=96h1_w#&xb^qbm4@yz2&+vwl90e6449!jcje_f@n'
 
